@@ -60,7 +60,7 @@ export default function App() {
           <button onClick={() => { setPaused(false); setFact(randomFact()) }} className="bg-blue-500 text-white px-4 py-2 rounded">
             Продължи
           </button>
-          <button onClick={() => setFinished(true)} className="bg-red-500 text-white px-4 py-2 rounded">
+          <button onClick={() => { setPaused(false); setFinished(true); }} className="bg-red-500 text-white px-4 py-2 rounded">
             Край на играта
           </button>
         </div>
