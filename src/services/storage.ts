@@ -1,8 +1,15 @@
 // TODO: implement storage service
 
 export function loadFacts(): any[] {
-  // TODO: load facts from localStorage
-  return [];
+  const raw = localStorage.getItem('facts');
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('loadFacts: failed to parse facts', e);
+    return [];
+  }
 }
 
 export function saveFacts(facts: any[]): void {
