@@ -12,12 +12,17 @@ export default function App() {
   const [score, setScore] = useState(0)
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const [isFinished, setFinished] = useState(false)
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
     console.log('Loaded facts:', loadFacts())
   }, [])
 
   const handleSubmit = (ok: boolean, duration: number, timedOut: boolean) => {
+    if (timedOut) {
+      setPaused(true)
+      return
+    }
     setScore((s) => {
       const next = s + (ok ? POINT_CORRECT : POINT_WRONG)
       if (next >= TARGET_SCORE) {
@@ -47,6 +52,21 @@ export default function App() {
     setFinished(false)
   }
 
+  if (paused) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+        <div className="text-2xl">Времето изтече!</div>
+        <div className="flex gap-4">
+          <button onClick={() => { setPaused(false); setFact(randomFact()) }} className="bg-blue-500 text-white px-4 py-2 rounded">
+            Продължи
+          </button>
+          <button onClick={() => setFinished(true)} className="bg-red-500 text-white px-4 py-2 rounded">
+            Край на играта
+          </button>
+        </div>
+      </div>
+    )
+  }
   if (isFinished) return <Summary score={score} onRestart={restart} />
 
   return (
