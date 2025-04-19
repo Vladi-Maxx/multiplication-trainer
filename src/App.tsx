@@ -17,7 +17,7 @@ export default function App() {
     console.log('Loaded facts:', loadFacts())
   }, [])
 
-  const handleSubmit = (ok: boolean) => {
+  const handleSubmit = (ok: boolean, duration: number, timedOut: boolean) => {
     setScore((s) => {
       const next = s + (ok ? POINT_CORRECT : POINT_WRONG)
       if (next >= TARGET_SCORE) {
@@ -32,6 +32,8 @@ export default function App() {
         startedAt: new Date().toISOString(),
         finishedAt: new Date().toISOString(),
         score: next,
+        duration,
+        timedOut,
         factsPractised: updatedFacts
       })
       return next
