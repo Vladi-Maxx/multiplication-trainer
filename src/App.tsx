@@ -25,13 +25,29 @@ export default function App() {
     }
     setScore((s) => {
       const next = s + (ok ? POINT_CORRECT : POINT_WRONG)
+      // update statistics for this fact
+      const prevFacts = loadFacts()
+      // find existing stats or init
+      const existing = prevFacts.find(f => f.i === fact.i && f.j === fact.j) as any
+      const record = existing
+        ? { ...existing }
+        : { i: fact.i, j: fact.j, correctCount: 0, wrongCount: 0, streak: 0, avgTime: 0, attempts: 0 }
+      // update metrics
+      record.attempts = (record.attempts ?? 0) + 1
+      if (ok) {
+        record.correctCount = (record.correctCount ?? 0) + 1
+        record.streak = (record.streak ?? 0) + 1
+      } else {
+        record.wrongCount = (record.wrongCount ?? 0) + 1
+        record.streak = 0
+      }
+      record.avgTime = ((record.avgTime ?? 0) * (record.attempts - 1) + duration) / record.attempts
+      // save updated stats
+      const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record]
+      saveFacts(updatedFacts)
       if (next >= TARGET_SCORE) {
         setFinished(true)
       }
-      const prevFacts = loadFacts()
-      const factRecord = { ...fact, correct: ok }
-      const updatedFacts = [...prevFacts, factRecord]
-      saveFacts(updatedFacts)
       logSession({
         id: Date.now().toString(),
         startedAt: new Date().toISOString(),
