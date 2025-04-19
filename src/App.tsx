@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import FlashCard, { Fact } from './components/FlashCard.tsx'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
-import { loadFacts } from './services/storage'
+import { loadFacts, saveFacts, logSession } from './services/storage'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
@@ -23,6 +23,17 @@ export default function App() {
       if (next >= TARGET_SCORE) {
         setFinished(true)
       }
+      const prevFacts = loadFacts()
+      const factRecord = { ...fact, correct: ok }
+      const updatedFacts = [...prevFacts, factRecord]
+      saveFacts(updatedFacts)
+      logSession({
+        id: Date.now().toString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        score: next,
+        factsPractised: updatedFacts
+      })
       return next
     })
     setFact(randomFact())
