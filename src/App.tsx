@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import FlashCard, { Fact } from './components/FlashCard.tsx'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
+import { loadFacts } from './services/storage'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
@@ -11,6 +12,10 @@ export default function App() {
   const [score, setScore] = useState(0)
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const [isFinished, setFinished] = useState(false)
+
+  useEffect(() => {
+    console.log('Loaded facts:', loadFacts())
+  }, [])
 
   const handleSubmit = (ok: boolean) => {
     setScore((s) => {
