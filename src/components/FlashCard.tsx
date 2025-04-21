@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 export interface Fact {
   i: number
@@ -6,15 +6,29 @@ export interface Fact {
 }
 interface Props {
   fact: Fact
-  onSubmit: (isCorrect: boolean) => void
+  onSubmit: (isCorrect: boolean, duration: number, timedOut: boolean) => void
 }
 export default function FlashCard({ fact, onSubmit }: Props) {
   const [answer, setAnswer] = useState('')
+  const startTimeRef = useRef<number>(0)
+  const timerRef = useRef<number | null>(null)
   const correct = fact.i * fact.j
+
+  useEffect(() => {
+    startTimeRef.current = Date.now()
+    timerRef.current = window.setTimeout(() => {
+      onSubmit(false, 30, true)
+    }, 30000)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [fact])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    onSubmit(Number(answer) === correct)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const duration = (Date.now() - startTimeRef.current) / 1000
+    onSubmit(Number(answer) === correct, duration, false)
     setAnswer('')
   }
 
