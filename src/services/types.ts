@@ -6,6 +6,8 @@ export interface Fact {
   streak: number
   avgTime: number
   attempts: number
+  box: number  // Leitner box (1..5)
+  lastPracticed: string  // ISO date of last practice
 }
 
 export interface Session {
@@ -14,4 +16,6 @@ export interface Session {
   finishedAt: string
   score: number
   factsPractised: Fact[]
+  duration: number  // session duration in seconds
+  timedOut: boolean // whether session ended by timeout
 }

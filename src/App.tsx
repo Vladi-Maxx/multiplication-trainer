@@ -42,6 +42,15 @@ export default function App() {
         record.streak = 0
       }
       record.avgTime = ((record.avgTime ?? 0) * (record.attempts - 1) + duration) / record.attempts
+      // Leitner system: update box and lastPracticed
+      const now = new Date().toISOString();
+      if (ok && record.streak >= 3) {
+        record.box = Math.min((record.box ?? 1) + 1, 5);
+        record.lastPracticed = now;
+      } else if (!ok) {
+        record.box = 1;
+        record.lastPracticed = now;
+      }
       // save updated stats
       const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record]
       saveFacts(updatedFacts)

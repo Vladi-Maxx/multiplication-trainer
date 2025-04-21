@@ -8,32 +8,35 @@ export const allFacts = Array.from({ length: 9 }, (_, i) =>
 // Адаптивно теглене на факт
 export function randomFact() {
   const stats: StatFact[] = loadFacts()
-  // Ако няма статистики, теглим на случаен принцип
-  if (!stats || stats.length === 0) {
+  // филтрираме mastered факти (box>=5 и streak>=3)
+  const activeFacts = allFacts.filter(fact => {
+    const rec = stats.find(r => r.i === fact.i && r.j === fact.j)
+    if (rec && rec.box >= 5 && rec.streak >= 3) {
+      return false
+    }
+    return true
+  })
+  // ако няма активни факти, теглим от всички
+  if (activeFacts.length === 0) {
     return allFacts[Math.floor(Math.random() * allFacts.length)]
   }
-  // За всички факти изчисляваме тегло
-  const weighted = allFacts.map(fact => {
-    const s = stats.find(x => x.i === fact.i && x.j === fact.j)
-    let weight = 1
-    if (s) {
-      weight += (s.wrongCount ?? 0)
-      if (s.streak === 0) weight += 2
-      if (s.avgTime && s.avgTime > 6) weight += (s.avgTime - 6)
-    }
+  // тегла по Leitner box weights
+  const boxWeights: Record<number, number> = { 1: 5, 2: 3, 3: 2, 4: 1, 5: 0 }
+  const weighted = activeFacts.map(fact => {
+    const rec = stats.find(r => r.i === fact.i && r.j === fact.j)
+    const box = rec?.box ?? 1
+    const weight = boxWeights[box] ?? 0
     return { fact, weight }
   })
-  // Сумираме общото тегло
   const total = weighted.reduce((sum, w) => sum + w.weight, 0)
-  // Теглим случайно число в този интервал
   let r = Math.random() * total
-  for (const w of weighted) {
-    if (r < w.weight) {
-      console.log('Selected fact', w.fact, 'weight', w.weight)
-      return w.fact
+  for (const wItem of weighted) {
+    if (r < wItem.weight) {
+      console.log('Selected fact', wItem.fact, 'weight', wItem.weight)
+      return wItem.fact
     }
-    r -= w.weight
+    r -= wItem.weight
   }
-  // fallback
-  return allFacts[Math.floor(Math.random() * allFacts.length)]
+  // fallback към активните факти
+  return activeFacts[Math.floor(Math.random() * activeFacts.length)]
 }

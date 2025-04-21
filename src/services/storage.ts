@@ -7,7 +7,14 @@ export function loadFacts(): Fact[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Fact[]) : [];
+    const arr = Array.isArray(parsed) ? (parsed as Fact[]) : [];
+    // default Leitner fields
+    const now = new Date().toISOString();
+    arr.forEach(r => {
+      if (r.box == null) r.box = 1;
+      if (r.lastPracticed == null) r.lastPracticed = now;
+    });
+    return arr;
   } catch (e) {
     console.error('loadFacts: failed to parse facts', e);
     return [];
