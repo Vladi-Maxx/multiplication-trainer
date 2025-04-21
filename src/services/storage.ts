@@ -1,10 +1,27 @@
 import type { Fact, Session } from './types';
+import { allFacts } from '../utils/facts';
 
 // TODO: implement storage service
 
 export function loadFacts(): Fact[] {
   const raw = localStorage.getItem('facts');
-  if (!raw) return [];
+  if (!raw) {
+    const now = new Date().toISOString();
+    const defaultFacts: Fact[] = allFacts.map(f => ({
+      i: f.i,
+      j: f.j,
+      correctCount: 0,
+      wrongCount: 0,
+      streak: 0,
+      avgTime: 0,
+      attempts: 0,
+      box: 1,
+      lastPracticed: now,
+      nextPractice: now
+    }));
+    localStorage.setItem('facts', JSON.stringify(defaultFacts));
+    return defaultFacts;
+  }
   try {
     const parsed = JSON.parse(raw);
     const arr = Array.isArray(parsed) ? (parsed as Fact[]) : [];
@@ -13,6 +30,14 @@ export function loadFacts(): Fact[] {
     arr.forEach(r => {
       if (r.box == null) r.box = 1;
       if (r.lastPracticed == null) r.lastPracticed = now;
+    });
+    // default nextPractice based on Leitner intervals
+    const intervalMap: Record<number, number> = {1:0,2:1,3:2,4:4,5:7};
+    arr.forEach(r => {
+      if (!r.nextPractice || isNaN(Date.parse(r.nextPractice))) {
+        const days = intervalMap[r.box] ?? 0;
+        r.nextPractice = new Date(Date.now() + days * 86400000).toISOString();
+      }
     });
     return arr;
   } catch (e) {
