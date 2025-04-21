@@ -1,10 +1,11 @@
 export interface Fact {
   i: number
   j: number
-  correct: number
-  wrong: number
+  correctCount: number
+  wrongCount: number
   streak: number
   avgTime: number
+  attempts: number
 }
 
 export interface Session {

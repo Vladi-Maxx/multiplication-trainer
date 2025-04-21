@@ -1,4 +1,5 @@
-import { loadFacts } from '../services/storage'
+import { loadFacts } from '../services/storage';
+import type { Fact as StatFact } from '../services/types';
 
 export const allFacts = Array.from({ length: 9 }, (_, i) =>
   Array.from({ length: 9 }, (_, j) => ({ i: i + 1, j: j + 1 }))
@@ -6,7 +7,7 @@ export const allFacts = Array.from({ length: 9 }, (_, i) =>
 
 // Адаптивно теглене на факт
 export function randomFact() {
-  const stats = loadFacts()
+  const stats: StatFact[] = loadFacts()
   // Ако няма статистики, теглим на случаен принцип
   if (!stats || stats.length === 0) {
     return allFacts[Math.floor(Math.random() * allFacts.length)]
@@ -27,10 +28,12 @@ export function randomFact() {
   // Теглим случайно число в този интервал
   let r = Math.random() * total
   for (const w of weighted) {
-    if (r < w.weight) return w.fact
+    if (r < w.weight) {
+      console.log('Selected fact', w.fact, 'weight', w.weight)
+      return w.fact
+    }
     r -= w.weight
   }
   // fallback
   return allFacts[Math.floor(Math.random() * allFacts.length)]
 }
-
