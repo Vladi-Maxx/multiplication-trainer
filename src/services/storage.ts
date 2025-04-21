@@ -1,18 +1,20 @@
+import type { Fact, Session } from './types';
+
 // TODO: implement storage service
 
-export function loadFacts(): any[] {
+export function loadFacts(): Fact[] {
   const raw = localStorage.getItem('facts');
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? (parsed as Fact[]) : [];
   } catch (e) {
     console.error('loadFacts: failed to parse facts', e);
     return [];
   }
 }
 
-export function saveFacts(facts: any[]): void {
+export function saveFacts(facts: Fact[]): void {
   const raw = JSON.stringify(facts);
   try {
     localStorage.setItem('facts', raw);
@@ -21,13 +23,13 @@ export function saveFacts(facts: any[]): void {
   }
 }
 
-export function logSession(session: any): void {
+export function logSession(session: Session): void {
   const raw = localStorage.getItem('sessions');
-  let sessions: any[] = [];
+  let sessions: Session[] = [];
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      sessions = Array.isArray(parsed) ? parsed : [];
+      sessions = Array.isArray(parsed) ? (parsed as Session[]) : [];
     } catch (e) {
       console.error('logSession: failed to parse sessions', e);
       sessions = [];
