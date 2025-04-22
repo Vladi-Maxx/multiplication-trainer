@@ -32,7 +32,7 @@ export default function Keypad({ value, setValue, onSubmit }: KeypadProps) {
 
   return (
     <div className="keypad">
-      {["7","8","9","4","5","6","1","2","3","0","OK"].map((k, i) => (
+      {["7","8","9","4","5","6","1","2","3","0","⌫","OK"].map((k, i) => (
         <button
           key={i}
           type={k === 'OK' ? 'submit' : 'button'}
@@ -45,4 +45,3 @@ export default function Keypad({ value, setValue, onSubmit }: KeypadProps) {
     </div>
   )
 }
-
