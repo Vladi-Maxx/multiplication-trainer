@@ -4,6 +4,7 @@ import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
 import { loadFacts, saveFacts, logSession } from './services/storage'
+import dragonPic from '../Pics/Dragon 1.png'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
@@ -166,6 +167,7 @@ export default function App() {
         </div>
         {/* Десен панел - input и keypad */}
         <div className="right-panel flex flex-col items-center gap-4">
+          <img src={dragonPic} alt="Dragon Illustration" className="max-w-full h-auto mb-4" />
           <InputAndKeypad onSubmit={handleSubmit} correctAnswer={fact.i * fact.j} fact={fact} />
         </div>
       </div>
