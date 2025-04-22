@@ -33,20 +33,32 @@ export default function FlashCard({ fact, onSubmit }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
-      <div className="text-3xl font-bold">
-        {fact.i} × {fact.j} = ?
+    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6 w-full">
+      <div id="problem" className="problem">
+        {fact.i} × {fact.j}
       </div>
       <input
+        id="answer"
         autoFocus
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
-        className="border rounded px-3 py-2 text-center w-32 text-xl"
+        className="input-field w-full"
         type="number"
       />
-      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-        Провери
-      </button>
+      {/* keypad */}
+      <div className="keypad">
+        {['1','2','3','4','5','6','7','8','9','⌫','0','OK'].map((k,i)=> (
+          <button
+            key={i}
+            type={k==='OK'? 'submit':'button'}
+            className={`key ${k==='OK'?'submit':''}`}
+            onClick={()=>{
+              if(k==='OK') return; if(k==='⌫') setAnswer(a=>a.slice(0,-1)); else setAnswer(a=>a+k);
+            }}>
+            {k==='OK'? 'Изпрати':k}
+          </button>
+        ))}
+      </div>
     </form>
   );
 }

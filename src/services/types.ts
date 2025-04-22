@@ -8,6 +8,7 @@ export interface Fact {
   attempts: number
   box: number  // Leitner box (1..5)
   lastPracticed: string  // ISO date of last practice
+  nextPractice: string  // ISO date of next scheduled practice
 }
 
 export interface Session {

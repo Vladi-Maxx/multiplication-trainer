@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import FlashCard, { Fact } from './components/FlashCard.tsx'
+import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
 import { loadFacts, saveFacts, logSession } from './services/storage'
@@ -31,7 +32,7 @@ export default function App() {
       const existing = prevFacts.find(f => f.i === fact.i && f.j === fact.j) as any
       const record = existing
         ? { ...existing }
-        : { i: fact.i, j: fact.j, correctCount: 0, wrongCount: 0, streak: 0, avgTime: 0, attempts: 0 }
+        : { i: fact.i, j: fact.j, correctCount: 0, wrongCount: 0, streak: 0, avgTime: 0, attempts: 0, box: 1, lastPracticed: new Date().toISOString() }
       // update metrics
       record.attempts = (record.attempts ?? 0) + 1
       if (ok) {
@@ -51,6 +52,9 @@ export default function App() {
         record.box = 1;
         record.lastPracticed = now;
       }
+      // update nextPractice based on interval
+      const daysMap: Record<number, number> = {1: 0, 2: 1, 3: 2, 4: 4, 5: 7};
+      record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
       // save updated stats
       const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record]
       saveFacts(updatedFacts)
@@ -95,14 +99,36 @@ export default function App() {
   if (isFinished) return <Summary score={score} onRestart={restart} />
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6">
-      <div className="text-2xl">Точки: {score}</div>
-      <FlashCard fact={fact} onSubmit={handleSubmit} />
-      <div className="w-64 h-2 bg-gray-300 rounded">
+    <div className="app-wrapper">
+      {/* progress bar */}
+      <div className="progress-container">
         <div
-          className="h-full bg-green-500 rounded"
-          style={{ width: `${(score / TARGET_SCORE) * 100}%` }}
+          className="progress-bar"
+          style={{ width: `${Math.min((score / TARGET_SCORE) * 100, 100)}%` }}
         />
+        <span className="progress-text">
+          {Math.round((score / TARGET_SCORE) * 100)}%
+        </span>
+      </div>
+
+      {/* three-panel layout, точно като в mockup Grisho.html */}
+      <div className="main-content">
+        {/* Ляв панел - пъзел */}
+        <div className="left-panel">
+          <div className="puzzle-placeholder">
+            {/* Тук ще сложим canvas или SVG за пъзела в бъдеще */}
+          </div>
+        </div>
+        {/* Централен панел - само задачата */}
+        <div className="flash-card-panel flex items-center justify-center">
+          <div className="problem" id="problem">
+            {fact.i} × {fact.j}
+          </div>
+        </div>
+        {/* Десен панел - input и keypad */}
+        <div className="right-panel flex flex-col items-center gap-4">
+          <InputAndKeypad onSubmit={handleSubmit} correctAnswer={fact.i * fact.j} fact={fact} />
+        </div>
       </div>
     </div>
   )
