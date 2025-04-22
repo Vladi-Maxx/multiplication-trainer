@@ -159,7 +159,7 @@ export default function App() {
           </div>
         </div>
         {/* Централен панел - само задачата */}
-        <div className="flash-card-panel flex items-center justify-center">
+        <div className="flash-card-panel">
           <div className="problem" id="problem">
             {fact.i} × {fact.j}
           </div>
