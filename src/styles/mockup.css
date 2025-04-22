@@ -23,23 +23,30 @@ body {
 }
 
 .app-wrapper {
-  background-color: var(--light-panel-bg);
+  background-color: rgba(214, 245, 227, 0.93); /* пастелно бледо зелено с лекa прозрачност */
+  /* Може да смениш на #d6f5e3 за плътно */
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 24px;
   max-width: 900px;
   width: 100%;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 24px 0 rgba(60, 64, 67, 0.18), 0 1.5px 5px 0 rgba(60,64,67,0.12);
   display: flex;
   flex-direction: column;
   gap: 24px;
+  transition: box-shadow 0.2s cubic-bezier(.4,0,.2,1);
 }
+
+.app-wrapper:hover, .app-wrapper:focus-within {
+  box-shadow: 0 8px 32px 0 rgba(60, 64, 67, 0.22), 0 3px 10px 0 rgba(60,64,67,0.16);
+}
+
 
 .progress-container {
   background-color: #e5e7eb;
   border-radius: 12px;
-  height: 24px;
-  overflow: hidden;
+  height: 38px;
+  overflow: visible; /* позволява emoji да се показва извън бара */
   position: relative;
 }
 
@@ -48,6 +55,7 @@ body {
   background: linear-gradient(to right, #f97316, #fb923c);
   border-radius: 12px;
   transition: width 0.5s ease-in-out;
+  min-width: 2.8rem;
 }
 
 .progress-text {
@@ -94,7 +102,20 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px 0 rgba(60,64,67,0.12), 0 1px 3px 0 rgba(60,64,67,0.10);
+  transition: box-shadow 0.2s cubic-bezier(.4,0,.2,1), transform 0.15s cubic-bezier(.4,0,.2,1);
 }
+
+.left-panel:hover, .flash-card-panel:hover, .right-panel:hover {
+  box-shadow: 0 6px 20px 0 rgba(60,64,67,0.18), 0 3px 10px 0 rgba(60,64,67,0.14);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.left-panel:active, .flash-card-panel:active, .right-panel:active {
+  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.10);
+  transform: translateY(1px) scale(0.99);
+}
+
 
 .problem {
   font-size: 5rem;
@@ -107,7 +128,7 @@ body {
 .input-field {
   background-color: #ffffff;
   border: 2px solid #d1d5db;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 16px;
   font-size: 2.5rem;
   text-align: center;
@@ -115,8 +136,19 @@ body {
   margin-bottom: 24px;
   width: 100%;
   box-sizing: border-box;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px 0 rgba(60,64,67,0.10);
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.13s;
 }
+.input-field:focus {
+  border-color: var(--system-blue);
+  box-shadow: 0 4px 16px 0 rgba(60,64,67,0.16);
+  outline: none;
+  transform: scale(1.01);
+}
+.input-field:hover {
+  box-shadow: 0 6px 20px 0 rgba(60,64,67,0.18);
+}
+
 
 .input-field:focus {
   border-color: var(--system-blue);
@@ -133,17 +165,47 @@ body {
 .key {
   background: linear-gradient(135deg, #d1d5db, #e5e7eb);
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 20px;
   font-size: 2rem;
   color: var(--dark-text);
   cursor: pointer;
-  transition: transform 0.1s, background-color 0.2s;
+  transition: box-shadow 0.18s, transform 0.13s, background 0.2s;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px 0 rgba(60,64,67,0.12), 0 1px 3px 0 rgba(60,64,67,0.10);
+  position: relative;
+  overflow: hidden;
 }
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.5s linear;
+  background-color: rgba(60, 64, 67, 0.18);
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.key:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 6px 20px 0 rgba(60,64,67,0.18);
+}
+.key:active {
+  background: #cbd5e1;
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.10);
+}
+
 
 .key:hover {
   transform: scale(1.05);
@@ -161,7 +223,20 @@ body {
   font-weight: 600;
   color: #ffffff;
   aspect-ratio: unset;
+  border-radius: 20px;
+  box-shadow: 0 6px 24px 0 rgba(60,64,67,0.20), 0 3px 10px 0 rgba(60,64,67,0.16);
+  transition: box-shadow 0.2s, transform 0.13s, background 0.2s;
 }
+.key.submit:hover {
+  box-shadow: 0 12px 32px 0 rgba(60,64,67,0.28);
+  transform: translateY(-2px) scale(1.04);
+}
+.key.submit:active {
+  background: #2563eb;
+  box-shadow: 0 2px 6px 0 rgba(60,64,67,0.13);
+  transform: translateY(1px) scale(0.97);
+}
+
 
 .key.submit:active {
   background: #2563eb;

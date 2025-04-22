@@ -14,12 +14,26 @@ export default function App() {
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const [isFinished, setFinished] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [lastCorrect, setLastCorrect] = useState<boolean|null>(null)
+  const progressRef = React.useRef<HTMLDivElement>(null);
+  const [progressWidth, setProgressWidth] = React.useState(0);
+  React.useEffect(() => {
+    if (progressRef.current) {
+      setProgressWidth(progressRef.current.offsetWidth);
+    }
+    const handleResize = () => {
+      if (progressRef.current) setProgressWidth(progressRef.current.offsetWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     console.log('Loaded facts:', loadFacts())
   }, [])
 
   const handleSubmit = (ok: boolean, duration: number, timedOut: boolean) => {
+    setLastCorrect(ok);
     if (timedOut) {
       setPaused(true)
       return
@@ -101,13 +115,38 @@ export default function App() {
   return (
     <div className="app-wrapper">
       {/* progress bar */}
-      <div className="progress-container">
+      <div className="progress-container" ref={progressRef} style={{position:'relative'}}>
         <div
           className="progress-bar"
-          style={{ width: `${Math.min((score / TARGET_SCORE) * 100, 100)}%` }}
+          style={{ 
+            width: `${Math.min((score / TARGET_SCORE) * 100, 100)}%`,
+            background: lastCorrect === null
+              ? 'linear-gradient(to right, #3b82f6, #60a5fa)'
+              : lastCorrect
+                ? 'linear-gradient(to right, #3b82f6, #60a5fa)'
+                : 'linear-gradient(to right, #f97316, #fb923c)'
+          }}
         />
         <span className="progress-text">
           {Math.round((score / TARGET_SCORE) * 100)}%
+        </span>
+        {/* Emoji indicator - абсолютно спрямо progress-container */}
+        <span
+          className="progress-emoji"
+          style={{
+            position: 'absolute',
+            left: progressWidth
+              ? `calc(${Math.max(0, Math.min((score / TARGET_SCORE), 1)) * progressWidth}px)`
+              : '0px',
+            top: '50%',
+            transform: 'translate(-50%,-50%)',
+            fontSize: '4.0rem',
+            pointerEvents: 'none',
+            zIndex: 20,
+            transition: 'left 0.5s cubic-bezier(.4,0,.2,1)'
+          }}
+        >
+          {lastCorrect === null ? '' : lastCorrect ? '😜' : '😒'}
         </span>
       </div>
 
