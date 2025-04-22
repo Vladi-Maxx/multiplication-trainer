@@ -158,6 +158,7 @@ export default function App() {
           <div className="puzzle-placeholder">
             {/* Тук ще сложим canvas или SVG за пъзела в бъдеще */}
           </div>
+          <img src={dragonPic} alt="Dragon Illustration" className="max-w-full h-auto mb-4" />
         </div>
         {/* Централен панел - само задачата */}
         <div className="flash-card-panel">
@@ -167,7 +168,6 @@ export default function App() {
         </div>
         {/* Десен панел - input и keypad */}
         <div className="right-panel flex flex-col items-center gap-4">
-          <img src={dragonPic} alt="Dragon Illustration" className="max-w-full h-auto mb-4" />
           <InputAndKeypad onSubmit={handleSubmit} correctAnswer={fact.i * fact.j} fact={fact} />
         </div>
       </div>
