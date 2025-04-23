@@ -21,20 +21,44 @@ export async function initializeSession(): Promise<boolean> {
     return true;
   }
 
-  // Използваме анонимна автентикация вместо имейл/парола
-  // Това е по-подходящо за нашия случай и не изисква валиден имейл адрес
+  // Използваме реален потребител вместо анонимна автентикация
   try {
-    console.log('Опитвам анонимна автентикация...');
+    console.log('Опитвам влизане с имейл/парола...');
     
-    // Използваме анонимна автентикация - не изисква имейл или парола
-    const { data, error } = await supabase.auth.signInAnonymously();
+    // Използваме реален имейл и парола
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: '***REMOVED***',
+      password: '***REMOVED***'
+    });
     
     if (error) {
-      console.error('Грешка при анонимна автентикация:', error);
-      return false;
+      // Ако потребителят не съществува, опитваме да го създадем
+      if (error.message.includes('Invalid login credentials')) {
+        console.log('Потребителят не съществува, опитвам регистрация...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: '***REMOVED***',
+          password: '***REMOVED***',
+          options: {
+            data: {
+              name: 'Влади'
+            }
+          }
+        });
+        
+        if (signUpError) {
+          console.error('Грешка при регистрация:', signUpError);
+          return false;
+        }
+        
+        console.log('Потребителят е създаден успешно! Проверете имейла си за потвърждение.');
+        return true;
+      } else {
+        console.error('Грешка при влизане:', error);
+        return false;
+      }
     }
     
-    console.log('Успешна анонимна автентикация, потребителски ID:', data.user?.id);
+    console.log('Успешно влизане като:', data.user?.email);
     return true;
   } catch (e) {
     console.error('Грешка при автентикация:', e);
