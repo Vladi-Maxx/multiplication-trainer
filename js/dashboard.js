@@ -10,7 +10,7 @@ async function initDashboard() {
     
     try {
         // Хардкодваме анонимния ключ за тестове
-        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiYnJneW9obndveXJzZXFjaXRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTM4MzkxNjcsImV4cCI6MjAyOTQxNTE2N30.Kf1WnOzUwfzXX8pP0BXuOjpvY2Fpb68c5EdlipB4sWE';
+        const anonKey = '***REMOVED***';
         
         // Създаваме връзка със Supabase
         supabaseClient = supabase.createClient(SUPABASE_URL, anonKey);
