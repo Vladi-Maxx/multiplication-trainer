@@ -113,7 +113,7 @@ async function loadBasicStats() {
         const totalTime = sessions.reduce((sum, session) => sum + session.duration_seconds, 0);
         const avgTime = totalProblems > 0 ? (totalTime / totalProblems).toFixed(2) : 0;
         
-        const masteredFacts = facts.filter(fact => fact.box >= 5 && fact.streak >= 3).length;
+        const masteredFacts = facts.filter(fact => fact.difficulty_rating < 3).length;
         
         // Обновяваме UI
         document.getElementById('totalProblems').textContent = totalProblems;
@@ -332,8 +332,9 @@ async function loadHeatmap() {
                 let textColor = 'rgba(0, 0, 0, 0.7)';
                 
                 if (userFact) {
-                    const attempts = userFact.attempts || 0;
                     const correct = userFact.correct_count || 0;
+                    const incorrect = userFact.incorrect_count || 0;
+                    const attempts = correct + incorrect;
                     const accuracy = attempts > 0 ? correct / attempts : 0;
                     
                     if (accuracy >= 0.8) {
@@ -398,16 +399,18 @@ async function loadProblemAreas() {
             .from('user_facts')
             .select('*, facts(*)')
             .eq('user_id', userData.id)
-            .gt('attempts', 0) // Само факти, които са опитвани
-            .order('accuracy', { ascending: true }); // Най-ниска точност първо
+            .or('correct_count.gt.0,incorrect_count.gt.0') // Само факти, които са опитвани
+            .order('difficulty_rating', { ascending: false }); // Най-трудните първо
         
         if (error) throw error;
         
         // Изчисляваме точността за всеки факт
         const factsWithAccuracy = userFacts.map(uf => {
-            const accuracy = uf.attempts > 0 ? uf.correct_count / uf.attempts : 0;
+            const attempts = (uf.correct_count || 0) + (uf.incorrect_count || 0);
+            const accuracy = attempts > 0 ? uf.correct_count / attempts : 0;
             return {
                 ...uf,
+                attempts,
                 accuracyPercent: Math.round(accuracy * 100)
             };
         });
