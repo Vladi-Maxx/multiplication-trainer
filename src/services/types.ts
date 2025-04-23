@@ -11,12 +11,18 @@ export interface Fact {
   nextPractice: string  // ISO date of next scheduled practice
 }
 
+export interface FactResponse {
+  fact: Fact
+  isCorrect: boolean
+  responseTime: number  // time to answer in milliseconds
+}
+
 export interface Session {
   id: string
-  startedAt: string
-  finishedAt: string
-  score: number
-  factsPractised: Fact[]
-  duration: number  // session duration in seconds
-  timedOut: boolean // whether session ended by timeout
+  startTime: string     // ISO date
+  endTime: string       // ISO date
+  score: number         // total score in the session
+  facts: FactResponse[] // facts practiced in this session with responses
+  durationSeconds: number  // session duration in seconds
+  timedOut: boolean     // whether session ended by timeout
 }

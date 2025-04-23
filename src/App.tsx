@@ -3,7 +3,8 @@ import FlashCard, { Fact } from './components/FlashCard.tsx'
 import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
-import { loadFacts, saveFacts, logSession } from './services/storage'
+import { loadFacts, saveFacts, logSession, initializeSupabaseFactsData, checkSupabaseConnection } from './services/storage'
+import { initializeSession } from './services/supabase'
 import dragonPic from '../Pics/Dragon 1.png'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
@@ -33,7 +34,34 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    console.log('Loaded facts:', loadFacts())
+    // Инициализираме Supabase при стартиране на приложението
+    const initializeApp = async () => {
+      try {
+        // Първо инициализираме сесията - влизаме с фиксирания потребител
+        const isAuthenticated = await initializeSession();
+        if (!isAuthenticated) {
+          console.warn('Не може да се инициализира потребителска сесия, продължаваме в офлайн режим');
+        }
+        
+        // Проверяваме дали можем да се свържем със Supabase
+        const isConnected = await checkSupabaseConnection();
+        
+        if (isConnected) {
+          console.log('Свързани със Supabase, инициализираме базата...');
+          // Инициализираме фактите в базата (ако вече съществуват, няма да се променят)
+          await initializeSupabaseFactsData();
+        } else {
+          console.log('Няма връзка със Supabase, работим само с localStorage');
+        }
+      } catch (error) {
+        console.error('Грешка при инициализиране на приложението:', error);
+      }
+      
+      // Зареждаме фактите от localStorage както преди
+      console.log('Loaded facts:', loadFacts());
+    };
+    
+    initializeApp();
   }, [])
 
   const handleSubmit = (ok, duration, timedOut) => {
@@ -96,14 +124,30 @@ export default function App() {
       if (next >= TARGET_SCORE) {
         setFinished(true)
       }
+      // Създаваме и записваме сесията в Supabase
       logSession({
         id: Date.now().toString(),
-        startedAt: new Date().toISOString(),
-        finishedAt: new Date().toISOString(),
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
         score: next,
-        duration,
+        durationSeconds: Math.floor(duration / 1000), // превръщаме милисекундите в секунди
         timedOut,
-        factsPractised: updatedFacts
+        facts: [{ // използваме новия FactResponse тип
+          fact: {
+            i: fact.i,
+            j: fact.j,
+            correctCount: 0,
+            wrongCount: 0,
+            streak: 0,
+            avgTime: 0,
+            attempts: 0,
+            box: 1,
+            lastPracticed: new Date().toISOString(),
+            nextPractice: new Date().toISOString()
+          },
+          isCorrect: ok,
+          responseTime: duration
+        }]
       })
       return next
     })
