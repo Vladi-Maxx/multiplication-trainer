@@ -9,33 +9,26 @@ async function initDashboard() {
     const loginButton = document.getElementById('loginButton');
     
     try {
-        // Опитваме се да изтеглим ANON_KEY от localStorage
-        const anonKey = localStorage.getItem('supabase_anon_key');
-        
-        if (!anonKey) {
-            connectionStatus.textContent = 'Липсва ключ за достъп. Моля, влезте от приложението първо.';
-            connectionStatus.classList.add('text-red-500');
-            return;
-        }
+        // Хардкодваме анонимния ключ за тестове
+        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiYnJneW9obndveXJzZXFjaXRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTM4MzkxNjcsImV4cCI6MjAyOTQxNTE2N30.Kf1WnOzUwfzXX8pP0BXuOjpvY2Fpb68c5EdlipB4sWE';
         
         // Създаваме връзка със Supabase
         supabaseClient = supabase.createClient(SUPABASE_URL, anonKey);
         
-        // Проверяваме дали потребителят е влязъл
-        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        // Автоматично влизаме за тестове
+        connectionStatus.textContent = 'Влизаме в системата...';
+        
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: '***REMOVED***',
+            password: '***REMOVED***',
+        });
         
         if (error) {
             throw error;
         }
         
-        if (!session) {
-            connectionStatus.textContent = 'Не сте влезли в системата. Моля, влезте първо.';
-            loginButton.addEventListener('click', handleLogin);
-            return;
-        }
-        
         // Запазваме потребителските данни
-        userData = session.user;
+        userData = data.user;
         connectionStatus.textContent = `Влезли сте като: ${userData.email}`;
         connectionStatus.classList.add('text-green-500');
         loginButton.textContent = 'Излез';
