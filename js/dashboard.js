@@ -168,68 +168,75 @@ async function loadTimeStats() {
         // Създаваме графика за сесиите
         const sessionsCtx = document.getElementById('sessionsChart').getContext('2d');
         
-        // Групираме задачите в реални тренировки (в рамките на 5 минути)
+        // Групираме задачите по дни - според логиката на приложението,
+        // една тренировка е когато се достигнат 300 точки или когато тренировката се прекрати ръчно
+        
         // Сортираме сесиите по време
         const sortedSessions = [...sessions].sort((a, b) => 
             new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
         
-        // Идентифицираме реалните тренировки (задачи в рамките на 5 минути)
-        let trainingSessions = [];
-        let currentSession = [];
+        // Групираме сесиите по дни
+        const sessionsByDay = {};
         
-        for (let i = 0; i < sortedSessions.length; i++) {
-            const session = sortedSessions[i];
-            if (!session.start_time) continue;
+        sortedSessions.forEach(session => {
+            if (!session.start_time) return;
             
-            if (currentSession.length === 0) {
-                // Първа задача в нова тренировка
-                currentSession.push(session);
-            } else {
-                // Проверяваме дали е в рамките на 5 минути от последната задача
-                const lastSessionTime = new Date(currentSession[currentSession.length - 1].start_time).getTime();
-                const currentSessionTime = new Date(session.start_time).getTime();
-                const timeDiff = (currentSessionTime - lastSessionTime) / (1000 * 60); // В минути
-                
-                if (timeDiff <= 5) {
-                    // Все още е същата тренировка
-                    currentSession.push(session);
-                } else {
-                    // Нова тренировка
-                    trainingSessions.push(currentSession);
-                    currentSession = [session];
-                }
+            const date = new Date(session.start_time);
+            // Взимаме датата без часа (формат YYYY-MM-DD)
+            const dayKey = date.toISOString().split('T')[0];
+            
+            if (!sessionsByDay[dayKey]) {
+                sessionsByDay[dayKey] = [];
             }
-        }
-        
-        // Добавяме последната тренировка, ако има такава
-        if (currentSession.length > 0) {
-            trainingSessions.push(currentSession);
-        }
-        
-        console.log('Общ брой тренировки:', trainingSessions.length);
-        console.log('Детайли за тренировките:', trainingSessions.map(ts => ({
-            дата: new Date(ts[0].start_time).toLocaleDateString(),
-            брой_задачи: ts.length,
-            продължителност: ts.length > 1 ? 
-                (new Date(ts[ts.length-1].start_time).getTime() - new Date(ts[0].start_time).getTime()) / 1000 / 60 + ' минути' : 
-                '0 минути'
-        })));
-        
-        // Групираме тренировките по дата
-        const factsByDate = trainingSessions.reduce((acc, training) => {
-            if (training.length === 0 || !training[0].start_time) return acc;
             
-            const date = new Date(training[0].start_time).toLocaleDateString();
-            const facts = training.reduce((sum, s) => sum + (s.fact_count || 0), 0);
+            sessionsByDay[dayKey].push(session);
+        });
+        
+        // За всеки ден, пресмятаме колко тренировки е имало
+        // Тъй като нямаме данни за TARGET_SCORE=300, ще направим приблизителна оценка
+        const TARGET_SCORE = 300; // Целеви точки за една тренировка
+        const POINT_CORRECT = 10; // Точки за правилен отговор
+        const POINT_WRONG = -5;  // Точки за грешен отговор
+        
+        // Броим тренировките за всеки ден
+        const trainingStats = Object.entries(sessionsByDay).map(([day, daySessions]) => {
+            // Изчисляваме приблизителен брой тренировки за този ден
+            const correctCount = daySessions.reduce((sum, s) => sum + (s.correct_count || 0), 0);
+            const incorrectCount = daySessions.reduce((sum, s) => sum + (s.incorrect_count || 0), 0);
+            const totalScore = (correctCount * POINT_CORRECT) + (incorrectCount * POINT_WRONG);
+            const factCount = daySessions.reduce((sum, s) => sum + (s.fact_count || 0), 0);
             
-            if (!acc[date]) {
-                acc[date] = {
-                    sessions: 0,
-                    facts: 0
-                };
+            // Приблизителен брой завършени тренировки - ако имаме повече от 30 задачи,
+            // вероятно е имало поне една тренировка
+            let estimatedCompletedTrainings = 1;
+            
+            // Ако имаме много задачи в един ден, вероятно са били няколко тренировки
+            if (factCount > 80) {
+                estimatedCompletedTrainings = Math.floor(factCount / 30); // около 30 задачи за тренировка
             }
-            acc[date].sessions += 1; // Всяка група е една реална тренировка
-            acc[date].facts += facts;
+            
+            return {
+                date: day,
+                sessions: daySessions.length,
+                factCount,
+                correctCount,
+                incorrectCount,
+                estimatedCompletedTrainings
+            };
+        });
+        
+        console.log('Статистика за тренировките по дни:', trainingStats);
+        
+        // Групираме в статистиката по дати
+        const factsByDate = trainingStats.reduce((acc, dayStats) => {
+            // Форматираме датата за показване
+            const jsDate = new Date(dayStats.date);
+            const formattedDate = jsDate.toLocaleDateString();
+            
+            acc[formattedDate] = {
+                sessions: dayStats.estimatedCompletedTrainings,
+                facts: dayStats.factCount
+            };
             return acc;
         }, {});
         
