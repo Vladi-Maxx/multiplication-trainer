@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG Пъзел Разкриване (Коригиран)</title>
+<style>
+  body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 0; /* Ensure no default body margin */
+    background-color: #f0f0f0; /* Light background for contrast */
+  }
+
+  h1 {
+      color: #333;
+  }
+
+  .puzzle-container {
+    position: relative; /* Needed for absolute positioning of SVG */
+    width: 90vw; /* Use viewport width for responsiveness */
+    max-width: 600px; /* Max width for larger screens */
+    /* Calculate height based on a 3:2 aspect ratio */
+    height: calc(90vw * (2 / 3));
+    max-height: 400px; /* Max height corresponding to max-width */
+    border: 1px solid #ccc;
+    overflow: hidden; /* Hide anything outside the container */
+    background-size: cover; /* Scale the image to cover the container */
+    background-position: center; /* Center the image */
+    margin: 0 auto; /* Center the container */
+    border-radius: 8px; /* Slightly rounded corners */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Add subtle shadow */
+  }
+
+  .puzzle-svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: default; /* Default cursor */
+  }
+
+  .puzzle-piece {
+    fill: #e0e0e0; /* Color of the covering pieces */
+    stroke: #999; /* Border color of the pieces */
+    stroke-width: 0.3; /* Slightly thinner stroke */
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out; /* Smooth opacity transition */
+    vector-effect: non-scaling-stroke; /* Keep stroke width constant on zoom */
+  }
+
+  .puzzle-piece.hidden {
+    opacity: 0;
+    pointer-events: none; /* Ignore hidden pieces for events */
+  }
+
+  .controls {
+      margin-top: 20px;
+      display: flex; /* Arrange buttons in a row */
+      flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+      justify-content: center; /* Center buttons */
+      gap: 10px; /* Space between buttons */
+  }
+  .controls button {
+      padding: 10px 18px; /* Larger padding */
+      margin: 0; /* Remove default margin */
+      font-size: 1em;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff; /* Blue background */
+      color: white;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .controls button:hover {
+      background-color: #0056b3; /* Darker blue on hover */
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .puzzle-container {
+        width: 95vw;
+        height: calc(95vw * (2 / 3));
+    }
+    .controls button {
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<h1>SVG Пъзел с Ефект на Разкриване (Коригиран)</h1>
+
+<div id="myPuzzleContainer" class="puzzle-container">
+  </div>
+
+<div class="controls">
+  <button onclick="puzzleInstance.revealRandomPieces(5)">Разкрий 5</button>
+  <button onclick="puzzleInstance.hideRandomPieces(3)">Скрий 3</button>
+  <button onclick="puzzleInstance.revealRandomPieces(puzzleInstance.getTotalPieces())">Разкрий Всички</button>
+   <button onclick="puzzleInstance.hideRandomPieces(puzzleInstance.getTotalPieces())">Скрий Всички</button>
+</div>
+
+<script>
+/**
+ * Module/Class for creating and managing an SVG puzzle reveal effect.
+ */
+const SvgPuzzleReveal = (function() {
+
+  /**
+   * Генерира SVG path данни ('d' атрибут) за единично пъзелно парче
+   * използвайки квадратични криви за табове/вдлъбнатини.
+   * @param {number} x - X координата на горния ляв ъгъл.
+   * @param {number} y - Y координата на горния ляв ъгъл.
+   * @param {number} w - Ширина на парчето.
+   * @param {number} h - Височина на парчето.
+   * @param {object} edges - Обект, описващ формите на ръбовете {top, right, bottom, left}.
+   * Стойности: 0 (прав), 1 (изпъкналост), -1 (вдлъбнатина).
+   * @param {number} tabSize - Приблизителен размер на изпъкналостите/вдлъбнатините като част от ширината/височината.
+   * @returns {string} SVG path данни като низ.
+   */
+  function generatePiecePath(x, y, w, h, edges, tabSize) {
+    // Размери на изпъкналостта/вдлъбнатината
+    const dw = w * tabSize; // Ширина на таба
+    const dh = h * tabSize; // Височина на таба
+    
+    // Изчисляваме дължините на правите сегменти от двете страни на извития ръб
+    const segmentWidth = (w - dw) / 2;
+    const segmentHeight = (h - dh) / 2;
+    
+    // Започваме пътя от горния ляв ъгъл
+    let path = `M ${x},${y} `;
+    
+    // Горен ръб
+    if (edges.top === 0) { // Прав ръб
+      path += `h ${w} `; // Хоризонтална линия
+    } else { // Извит ръб
+      const tabHeight = edges.top * dh; // Положително за изпъкналост, отрицателно за вдлъбнатина
+      const midX = x + segmentWidth + (dw / 2);
+      const controlY = y - tabHeight;
+      
+      path += `h ${segmentWidth} `; // Първи прав сегмент
+      path += `q ${dw/2},${tabHeight} ${dw},0 `; // Квадратична крива
+      path += `h ${segmentWidth} `; // Втори прав сегмент
+    }
+    
+    // Десен ръб
+    if (edges.right === 0) { // Прав ръб
+      path += `v ${h} `; // Вертикална линия
+    } else { // Извит ръб
+      const tabWidth = edges.right * dw; // Положително за изпъкналост, отрицателно за вдлъбнатина
+      const midY = y + segmentHeight + (dh / 2);
+      const controlX = x + w + tabWidth;
+      
+      path += `v ${segmentHeight} `; // Първи прав сегмент
+      path += `q ${tabWidth},${dh/2} 0,${dh} `; // Квадратична крива
+      path += `v ${segmentHeight} `; // Втори прав сегмент
+    }
+    
+    // Долен ръб (движим се отдясно наляво, затова знакът е обратен)
+    if (edges.bottom === 0) { // Прав ръб
+      path += `h ${-w} `; // Хоризонтална линия (отрицателна)
+    } else { // Извит ръб
+      const tabHeight = -edges.bottom * dh; // Забележете минуса за обръщане на логиката
+      const midX = x + w - segmentWidth - (dw / 2);
+      const controlY = y + h + tabHeight;
+      
+      path += `h ${-segmentWidth} `; // Първи прав сегмент (отрицателен)
+      path += `q ${-dw/2},${tabHeight} ${-dw},0 `; // Квадратична крива (отрицателна по x)
+      path += `h ${-segmentWidth} `; // Втори прав сегмент (отрицателен)
+    }
+    
+    // Ляв ръб (движим се отдолу нагоре, затова знакът е обратен)
+    if (edges.left === 0) { // Прав ръб
+      path += `v ${-h} `; // Вертикална линия (отрицателна)
+    } else { // Извит ръб
+      const tabWidth = -edges.left * dw; // Забележете минуса за обръщане на логиката
+      const midY = y + h - segmentHeight - (dh / 2);
+      const controlX = x + tabWidth;
+      
+      path += `v ${-segmentHeight} `; // Първи прав сегмент (отрицателен)
+      path += `q ${tabWidth},${-dh/2} 0,${-dh} `; // Квадратична крива (отрицателна по y)
+      path += `v ${-segmentHeight} `; // Втори прав сегмент (отрицателен)
+    }
+    
+    path += 'Z'; // Затваряме пътя
+    
+    return path;
+  }
+
+
+  /**
+   * Creates a puzzle instance.
+   * @param {string} containerId - ID of the HTML element to contain the puzzle.
+   * @param {string} imageUrl - URL of the background image.
+   * @param {number} rows - Number of rows in the puzzle grid.
+   * @param {number} cols - Number of columns in the puzzle grid.
+   * @param {number} [tabSize=0.2] - Size of the tabs/notches (0 to ~0.4).
+   */
+  function createPuzzle(containerId, imageUrl, rows, cols, tabSize = 0.2) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error(`Container with ID "${containerId}" not found.`);
+      return null;
+    }
+
+    // Set background image on the container
+    container.style.backgroundImage = `url('${imageUrl}')`;
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+
+    // Use viewBox for easy scaling and positioning within the container.
+    const viewBoxWidth = 100;
+    // Calculate aspect ratio safely, defaulting if height is 0 initially
+    const aspectRatio = container.clientHeight > 0 && container.clientWidth > 0
+                        ? container.clientWidth / container.clientHeight
+                        : 3/2; // Default aspect ratio
+    const viewBoxHeight = viewBoxWidth / aspectRatio;
+
+
+    svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+    svg.setAttribute("class", "puzzle-svg-overlay");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+
+    // Calculate piece dimensions within the viewBox coordinate system
+    const pieceWidth = viewBoxWidth / cols;
+    const pieceHeight = viewBoxHeight / rows;
+    const pieces = []; // Array to store references to the <path> elements
+
+    // --- Generate Edge Shapes ---
+    // Randomly determine if each internal connection is a tab (1) or notch (-1)
+    const horizontalJoints = Array(rows).fill(null).map(() =>
+        Array(cols - 1).fill(0).map(() => Math.random() < 0.5 ? 1 : -1)
+    );
+    const verticalJoints = Array(rows - 1).fill(null).map(() =>
+        Array(cols).fill(0).map(() => Math.random() < 0.5 ? 1 : -1)
+    );
+    // --- End Generate Edge Shapes ---
+
+    // --- Generate Puzzle Pieces ---
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const pieceX = c * pieceWidth;
+        const pieceY = r * pieceHeight;
+
+        // Determine the shape of each edge for the current piece based on joints
+        const edges = {
+          top: r === 0 ? 0 : -verticalJoints[r - 1][c],
+          right: c === cols - 1 ? 0 : horizontalJoints[r][c],
+          bottom: r === rows - 1 ? 0 : verticalJoints[r][c],
+          left: c === 0 ? 0 : -horizontalJoints[r][c - 1]
+        };
+
+        // Generate the SVG path data string using the updated function
+        const pathData = generatePiecePath(pieceX, pieceY, pieceWidth, pieceHeight, edges, tabSize);
+
+        // Create the <path> element
+        const path = document.createElementNS(svgNS, "path");
+        path.setAttribute("d", pathData);
+        path.setAttribute("class", "puzzle-piece");
+        // Add data attributes for potential future identification
+        path.setAttribute("data-row", r);
+        path.setAttribute("data-col", c);
+
+        // Add the piece to the SVG and the pieces array
+        svg.appendChild(path);
+        pieces.push(path);
+      }
+    }
+    // --- End Generate Puzzle Pieces ---
+
+    // Clear any previous content and add the generated SVG to the container
+    container.innerHTML = '';
+    container.appendChild(svg);
+
+    // --- Control Functions ---
+
+    /**
+     * Shuffles an array in place using the Fisher-Yates algorithm.
+     * @param {Array} array - The array to shuffle.
+     */
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // ES6 swap
+      }
+    }
+
+    /**
+     * Reveals (makes transparent) a specified number of random, currently visible pieces.
+     * @param {number} count - The number of pieces to reveal.
+     */
+    function revealRandomPieces(count) {
+      const visiblePieces = pieces.filter(p => !p.classList.contains('hidden'));
+      shuffleArray(visiblePieces);
+      // Ensure we don't try to reveal more pieces than available
+      const numToReveal = Math.min(count, visiblePieces.length);
+      const piecesToReveal = visiblePieces.slice(0, numToReveal);
+      piecesToReveal.forEach(p => p.classList.add('hidden'));
+      console.log(`Revealed ${piecesToReveal.length} pieces.`);
+    }
+
+    /**
+     * Hides (makes opaque) a specified number of random, currently revealed (transparent) pieces.
+     * @param {number} count - The number of pieces to hide.
+     */
+    function hideRandomPieces(count) {
+      const hiddenPieces = pieces.filter(p => p.classList.contains('hidden'));
+      shuffleArray(hiddenPieces);
+       // Ensure we don't try to hide more pieces than available
+      const numToHide = Math.min(count, hiddenPieces.length);
+      const piecesToHide = hiddenPieces.slice(0, numToHide);
+      piecesToHide.forEach(p => p.classList.remove('hidden'));
+      console.log(`Hid ${piecesToHide.length} pieces.`);
+    }
+
+     /**
+     * Gets the total number of pieces in the puzzle.
+     * @returns {number} Total piece count.
+     */
+    function getTotalPieces() {
+        return pieces.length;
+    }
+
+    // Return the public interface for the puzzle instance
+    return {
+      element: container,
+      svgElement: svg,
+      pieces: pieces,
+      revealRandomPieces: revealRandomPieces,
+      hideRandomPieces: hideRandomPieces,
+      getTotalPieces: getTotalPieces
+    };
+  }
+
+  // Expose the create function publicly
+  return {
+    create: createPuzzle
+  };
+
+})(); // End of SvgPuzzleReveal IIFE Module
+
+// --- Usage Example ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Image URL - Replace with your desired image
+  const imageUrl = 'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80';
+
+  // Create the puzzle instance when the DOM is ready
+  window.puzzleInstance = SvgPuzzleReveal.create(
+    'myPuzzleContainer', // ID of the container div
+    imageUrl,            // URL of the background image
+    5,                   // Number of rows
+    8,                   // Number of columns
+    0.25                 // Tab size (optional, defaults to 0.2) - Controls the size of the arcs
+  );
+
+  // Check if initialization was successful
+  if (!window.puzzleInstance) {
+      console.error("Failed to initialize puzzle.");
+  } else {
+      console.log("Puzzle initialized successfully.", window.puzzleInstance);
+  }
+
+  // Optional: Adjust viewBox on window resize for better responsiveness
+  window.addEventListener('resize', () => {
+    if (window.puzzleInstance) {
+      const container = window.puzzleInstance.element;
+      const svg = window.puzzleInstance.svgElement;
+      // Recalculate aspect ratio safely
+      const aspectRatio = container.clientHeight > 0 && container.clientWidth > 0
+                          ? container.clientWidth / container.clientHeight
+                          : 3/2; // Default aspect ratio
+      const viewBoxWidth = 100;
+      const viewBoxHeight = viewBoxWidth / aspectRatio;
+      svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+    }
+  });
+});
+
+</script>
+
+</body>
+</html>

@@ -10,12 +10,15 @@ const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
 const POINT_WRONG = -5
 
+import PuzzleSVG from './components/PuzzleSVG';
+
 export default function App() {
   const [score, setScore] = useState(0)
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const [isFinished, setFinished] = useState(false)
   const [paused, setPaused] = useState(false)
-  const [lastCorrect, setLastCorrect] = useState<boolean|null>(null)
+  const [lastCorrect, setLastCorrect] = useState(null)
+  const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
   const progressRef = React.useRef<HTMLDivElement>(null);
   const [progressWidth, setProgressWidth] = React.useState(0);
   React.useEffect(() => {
@@ -33,21 +36,40 @@ export default function App() {
     console.log('Loaded facts:', loadFacts())
   }, [])
 
-  const handleSubmit = (ok: boolean, duration: number, timedOut: boolean) => {
+  const handleSubmit = (ok, duration, timedOut) => {
     setLastCorrect(ok);
     if (timedOut) {
       setPaused(true)
       return
     }
-    setScore((s) => {
+    setPuzzleRevealedCount(prev => {
+      if (ok) return Math.min(prev + 2, 60);
+      else return Math.max(prev - 1, 0);
+    });
+    setScore(s => {
       const next = s + (ok ? POINT_CORRECT : POINT_WRONG)
       // update statistics for this fact
       const prevFacts = loadFacts()
-      // find existing stats or init
-      const existing = prevFacts.find(f => f.i === fact.i && f.j === fact.j) as any
+      const existing = prevFacts.find(f => f.i === fact.i && f.j === fact.j)
+      const daysMap: Record<number, number> = {1: 0, 2: 1, 3: 2, 4: 4, 5: 7};
+
       const record = existing
-        ? { ...existing }
-        : { i: fact.i, j: fact.j, correctCount: 0, wrongCount: 0, streak: 0, avgTime: 0, attempts: 0, box: 1, lastPracticed: new Date().toISOString() }
+        ? { ...existing } 
+        : { 
+            i: fact.i,
+            j: fact.j,
+            correctCount: 0,
+            wrongCount: 0,
+            streak: 0,
+            avgTime: 0,
+            attempts: 0,
+            box: 1,
+            lastPracticed: new Date().toISOString(),
+            nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString() 
+          };
+
+      // Update stats based on correctness
+      const now = new Date().toISOString();
       // update metrics
       record.attempts = (record.attempts ?? 0) + 1
       if (ok) {
@@ -59,7 +81,6 @@ export default function App() {
       }
       record.avgTime = ((record.avgTime ?? 0) * (record.attempts - 1) + duration) / record.attempts
       // Leitner system: update box and lastPracticed
-      const now = new Date().toISOString();
       if (ok && record.streak >= 3) {
         record.box = Math.min((record.box ?? 1) + 1, 5);
         record.lastPracticed = now;
@@ -68,10 +89,9 @@ export default function App() {
         record.lastPracticed = now;
       }
       // update nextPractice based on interval
-      const daysMap: Record<number, number> = {1: 0, 2: 1, 3: 2, 4: 4, 5: 7};
       record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
       // save updated stats
-      const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record]
+      const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record] 
       saveFacts(updatedFacts)
       if (next >= TARGET_SCORE) {
         setFinished(true)
@@ -158,7 +178,7 @@ export default function App() {
           <div className="puzzle-placeholder">
             {/* Тук ще сложим canvas или SVG за пъзела в бъдеще */}
           </div>
-          <img src={dragonPic} alt="Dragon Illustration" className="max-w-full h-auto mb-4" />
+          <PuzzleSVG revealedCount={puzzleRevealedCount} />
         </div>
         {/* Централен панел - само задачата */}
         <div className="flash-card-panel">
