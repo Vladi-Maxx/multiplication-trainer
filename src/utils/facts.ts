@@ -1,8 +1,8 @@
 import { loadFacts } from '../services/storage';
 import type { Fact as StatFact } from '../services/types';
 
-export const allFacts = Array.from({ length: 9 }, (_, i) =>
-  Array.from({ length: 9 }, (_, j) => ({ i: i + 1, j: j + 1 }))
+export const allFacts = Array.from({ length: 10 }, (_, i) =>
+  Array.from({ length: 10 }, (_, j) => ({ i: i + 1, j: j + 1 }))
 ).flat()
 
 // Адаптивно теглене на факт
