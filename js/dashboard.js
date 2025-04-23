@@ -134,12 +134,18 @@ async function loadTimeStats() {
             .from('sessions')
             .select('*')
             .eq('user_id', userData.id)
-            .order('start_time', { ascending: true });
+            .order('start_time', { ascending: true })
+            .limit(100);
         
         if (error) throw error;
         
+        console.log('Retrieved sessions:', sessions);
+        
         // Обработваме данните за графиката на сесиите
         const sessionsByDate = sessions.reduce((acc, session) => {
+            // Уверяваме се, че датата е валидна
+            if (!session.start_time) return acc;
+            
             const date = new Date(session.start_time).toLocaleDateString();
             acc[date] = (acc[date] || 0) + 1;
             return acc;
@@ -161,25 +167,78 @@ async function loadTimeStats() {
         
         // Създаваме графика за сесиите
         const sessionsCtx = document.getElementById('sessionsChart').getContext('2d');
+        
+        // Групираме сесиите по дата и изчисляваме броя факти за всеки ден
+        const factsByDate = sessions.reduce((acc, session) => {
+            if (!session.start_time) return acc;
+            
+            const date = new Date(session.start_time).toLocaleDateString();
+            if (!acc[date]) {
+                acc[date] = {
+                    sessions: 0,
+                    facts: 0
+                };
+            }
+            acc[date].sessions += 1;
+            acc[date].facts += session.fact_count || 0;
+            return acc;
+        }, {});
+        
+        const dates = Object.keys(factsByDate);
+        const sessionCounts = dates.map(date => factsByDate[date].sessions);
+        const factCounts = dates.map(date => factsByDate[date].facts);
+        
         new Chart(sessionsCtx, {
             type: 'bar',
             data: {
-                labels: Object.keys(sessionsByDate),
-                datasets: [{
-                    label: 'Брой сесии',
-                    data: Object.values(sessionsByDate),
-                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
-                    borderColor: 'rgba(139, 92, 246, 1)',
-                    borderWidth: 1
-                }]
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'Брой сесии',
+                        data: sessionCounts,
+                        backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Брой задачи',
+                        data: factCounts,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
                     y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         beginAtZero: true,
-                        precision: 0
+                        precision: 0,
+                        title: {
+                            display: true,
+                            text: 'Брой сесии'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        precision: 0,
+                        title: {
+                            display: true,
+                            text: 'Брой задачи'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
                     }
                 }
             }
@@ -230,7 +289,10 @@ async function loadHeatmap() {
         const { data: userFacts, error: factsError } = await supabaseClient
             .from('user_facts')
             .select('*, facts(*)')
-            .eq('user_id', userData.id);
+            .eq('user_id', userData.id)
+            .limit(100);
+            
+        console.log('Retrieved user facts:', userFacts);
         
         if (factsError) throw factsError;
         
@@ -240,6 +302,8 @@ async function loadHeatmap() {
             .select('*')
             .lte('multiplicand', 10)
             .lte('multiplier', 10);
+            
+        console.log('Retrieved all facts:', allFacts);
         
         if (allFactsError) throw allFactsError;
         
@@ -337,16 +401,22 @@ async function loadHeatmap() {
                     const attempts = correct + incorrect;
                     const accuracy = attempts > 0 ? correct / attempts : 0;
                     
-                    if (accuracy >= 0.8) {
-                        // Зелено за добро представяне
-                        backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                    } else if (accuracy >= 0.5) {
-                        // Жълто за средно представяне
-                        backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                    } else if (attempts > 0) {
-                        // Червено за слабо представяне
-                        backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`;
-                        textColor = 'rgba(255, 255, 255, 0.87)';
+                    // Винаги показваме цвят ако имаме потребителски факт
+                    if (attempts > 0) {
+                        if (accuracy >= 0.8) {
+                            // Зелено за добро представяне
+                            backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                        } else if (accuracy >= 0.5) {
+                            // Жълто за средно представяне
+                            backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                        } else {
+                            // Червено за слабо представяне
+                            backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`;
+                            textColor = 'rgba(255, 255, 255, 0.87)';
+                        }
+                    } else {
+                        // За факти без опити, но с потребителски запис
+                        backgroundColor = `rgba(158, 158, 158, 0.3)`; // Сиво за неопитани факти
                     }
                     
                     // Добавяме tooltip с информация
