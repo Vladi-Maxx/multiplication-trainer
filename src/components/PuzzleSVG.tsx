@@ -35,6 +35,37 @@ export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
   // Държим кои парчета са били току-що разкрити за shimmer
   const [shimmerTiles, setShimmerTiles] = useState<number[]>([]);
   const shimmerTimeouts = useRef<{ [key: number]: NodeJS.Timeout }>({});
+  
+  // Звуков ефект при разкриване
+  const audioRef = useRef(null);
+  const [prevRevealedCount, setPrevRevealedCount] = useState(0); // За да знаем кога има увеличение
+  
+  // Инициализиране на звуковия обект
+  useEffect(() => {
+    if (typeof Audio !== 'undefined') {
+      const sound = new Audio('/sounds/reveal.mp3');
+      sound.preload = 'auto';
+      sound.volume = 0.1; // Сила на звука - намалена до 0.2
+      audioRef.current = sound;
+    }
+  }, []);
+  
+  // Функция за възпроизвеждане на звука
+  const playRevealSound = () => {
+    const sound = audioRef.current;
+    if (sound) {
+      sound.currentTime = 0; // Връщаме в началото
+      sound.play().catch(error => console.error("Грешка при възпроизвеждане на звука:", error));
+    }
+  };
+  
+  // Следим за промени в revealedCount и пускаме звука при увеличение
+  useEffect(() => {
+    if (revealedCount > prevRevealedCount) {
+      playRevealSound();
+    }
+    setPrevRevealedCount(revealedCount);
+  }, [revealedCount]);
 
   useEffect(() => {
     setRevealed(prev => {
@@ -73,10 +104,12 @@ export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
     });
     // Почисти таймаутите при ънмаунт
     return () => {
-      Object.values(shimmerTimeouts.current).forEach(clearTimeout);
+      Object.values(shimmerTimeouts.current).forEach(timeout => clearTimeout(timeout as NodeJS.Timeout));
     };
   }, [revealedCount]);
 
+
+  
   return (
     <div style={{ width: '100%', aspectRatio: `${IMG_W}/${IMG_H}` }}>
       <svg
