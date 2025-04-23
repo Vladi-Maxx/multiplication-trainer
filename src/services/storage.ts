@@ -55,22 +55,55 @@ export function saveFacts(facts: Fact[]): void {
   }
 }
 
+// Ограничаваме до последните 10 сесии, за да не препълним localStorage
+// Така няма да превишаваме квотата
+const MAX_SESSIONS = 10;
+
 export function logSession(session: Session): void {
-  const raw = localStorage.getItem('sessions');
-  let sessions: Session[] = [];
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      sessions = Array.isArray(parsed) ? (parsed as Session[]) : [];
-    } catch (e) {
-      console.error('logSession: failed to parse sessions', e);
-      sessions = [];
-    }
-  }
-  sessions.push(session);
   try {
+    const raw = localStorage.getItem('sessions');
+    let sessions: Session[] = [];
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        sessions = Array.isArray(parsed) ? (parsed as Session[]) : [];
+      } catch (e) {
+        console.error('logSession: failed to parse sessions', e);
+        sessions = [];
+      }
+    }
+    
+    // Добавяме новата сесия
+    sessions.push(session);
+    
+    // Ако имаме повече от MAX_SESSIONS, премахваме най-старите
+    if (sessions.length > MAX_SESSIONS) {
+      sessions = sessions.slice(-MAX_SESSIONS);
+    }
+    
     localStorage.setItem('sessions', JSON.stringify(sessions));
   } catch (e) {
     console.error('logSession: failed to save sessions', e);
+    
+    // Ако имаме ограничение на квотата, опитваме да изчистим всички сесии
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      try {
+        localStorage.removeItem('sessions');
+        console.log('Sessions cleared due to quota limit');
+      } catch (clearError) {
+        console.error('Failed to clear sessions:', clearError);
+      }
+    }
+  }
+}
+
+// Функция за изчистване на всички данни в localStorage
+// Може да се използва чрез конзола или бутон в UI, ако се добави такъв
+export function clearAllStorageData(): void {
+  try {
+    localStorage.clear();
+    console.log('All local storage data has been cleared');
+  } catch (e) {
+    console.error('Failed to clear local storage:', e);
   }
 }
