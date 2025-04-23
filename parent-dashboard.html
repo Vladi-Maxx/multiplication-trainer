@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Родителски Дашборд - Математически Тренажор</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9fafb;
+        }
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+        }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-10">
+            <h1 class="text-4xl font-bold text-center text-purple-800">Родителски Дашборд</h1>
+            <p class="text-center text-gray-600 mt-2">Подробна статистика и анализ на прогреса на Гришо</p>
+        </header>
+
+        <!-- Информация за вход -->
+        <div id="loginInfo" class="mb-8 p-4 bg-white rounded-lg shadow">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-semibold">Статус на връзката</h2>
+                    <p id="connectionStatus">Проверка на връзката...</p>
+                </div>
+                <button id="loginButton" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Вход</button>
+            </div>
+        </div>
+        
+        <!-- Основни статистики -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Общ преглед</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Карти със статистика -->
+                <div class="dashboard-card bg-white p-6">
+                    <span class="stat-label">Общо задачи</span>
+                    <div class="stat-value text-purple-600" id="totalProblems">--</div>
+                    <div class="text-sm mt-2">От началото на ползването</div>
+                </div>
+                
+                <div class="dashboard-card bg-white p-6">
+                    <span class="stat-label">Средна точност</span>
+                    <div class="stat-value text-green-500" id="avgAccuracy">--</div>
+                    <div class="text-sm mt-2">Процент правилни отговори</div>
+                </div>
+                
+                <div class="dashboard-card bg-white p-6">
+                    <span class="stat-label">Средно време</span>
+                    <div class="stat-value text-blue-500" id="avgTime">--</div>
+                    <div class="text-sm mt-2">Секунди за задача</div>
+                </div>
+                
+                <div class="dashboard-card bg-white p-6">
+                    <span class="stat-label">Научени факти</span>
+                    <div class="stat-value text-amber-500" id="masteredFacts">--</div>
+                    <div class="text-sm mt-2">От общо 100 факта</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Временни графики -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Статистика във времето</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="dashboard-card bg-white p-6">
+                    <h3 class="text-lg font-semibold mb-4">Брой сесии по дни</h3>
+                    <div class="chart-container">
+                        <canvas id="sessionsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card bg-white p-6">
+                    <h3 class="text-lg font-semibold mb-4">Прогрес на точността</h3>
+                    <div class="chart-container">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Топлинна карта -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Детайлна топлинна карта</h2>
+            <div class="dashboard-card bg-white p-6">
+                <div id="heatmapContainer" class="overflow-x-auto">
+                    <!-- Тук ще се зареди топлинната карта -->
+                    <div class="text-center py-10">Зареждане на данни...</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Проблемни области -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Проблемни области</h2>
+            <div class="dashboard-card bg-white p-6">
+                <h3 class="text-lg font-semibold mb-4">Топ 10 най-трудни комбинации</h3>
+                <div id="problemAreasContainer">
+                    <div class="text-center py-10">Зареждане на данни...</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Скрипт за инициализиране на дашборда - ще го напишем отделно -->
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
