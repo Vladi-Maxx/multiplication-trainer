@@ -117,48 +117,23 @@ async function syncFactsWithSupabase(facts: Fact[]): Promise<void> {
         continue;
       }
       
-      // Проверяваме дали вече има запис за този потребител и факт
-      const { data: existingUserFact } = await supabase
+      // Upsert user_facts: insert or update in one call with valid columns
+      const userFactData = {
+        user_id: userId,
+        fact_id: factData.id,
+        correct_count: fact.correctCount,
+        incorrect_count: fact.wrongCount,
+        last_seen_at: fact.lastPracticed,
+        difficulty_rating: fact.avgTime ? fact.avgTime / 1000 : 5.0
+      };
+      const { data: ufData, error: ufError } = await supabase
         .from('user_facts')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('fact_id', factData.id)
-        .maybeSingle();
-      
-      // Ако съществува, актуализираме го
-      if (existingUserFact) {
-        await supabase
-          .from('user_facts')
-          .update({
-            // Запазваме точно същата структура на данните!
-            correct_count: fact.correctCount,
-            incorrect_count: fact.wrongCount,
-            streak: fact.streak,
-            avg_time: fact.avgTime,
-            attempts: fact.attempts,
-            box: fact.box,
-            last_practiced: fact.lastPracticed,
-            next_practice: fact.nextPractice,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingUserFact.id);
+        .upsert([userFactData], { onConflict: 'user_id,fact_id' })
+        .select();
+      if (ufError) {
+        console.error('syncFacts: Error upserting user_facts:', ufError);
       } else {
-        // Ако не съществува, създаваме нов запис
-        await supabase
-          .from('user_facts')
-          .insert({
-            user_id: userId,
-            fact_id: factData.id,
-            correct_count: fact.correctCount,
-            incorrect_count: fact.wrongCount,
-            streak: fact.streak,
-            avg_time: fact.avgTime,
-            attempts: fact.attempts,
-            box: fact.box,
-            last_practiced: fact.lastPracticed,
-            next_practice: fact.nextPractice,
-            difficulty_rating: 5.0 // Начална стойност, ще се актуализира при следваща синхронизация
-          });
+        console.log('syncFacts: upserted user_facts:', ufData);
       }
     }
     
@@ -223,7 +198,8 @@ export function logSession(session: Session): void {
  */
 async function syncSessionWithSupabase(session: Session): Promise<void> {
   if (!useSupabase) return;
-  
+  console.log('>>> syncSessionWithSupabase called with session:', JSON.stringify(session, null, 2)); // Log at entry
+
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
@@ -232,8 +208,9 @@ async function syncSessionWithSupabase(session: Session): Promise<void> {
       console.warn('syncSessionWithSupabase: No authenticated user');
       return;
     }
-    
+
     // Създаваме нова сесия в Supabase
+    console.log('>>> Attempting to insert into sessions table...');
     const { data: newSession, error } = await supabase
       .from('sessions')
       .insert({
@@ -247,14 +224,17 @@ async function syncSessionWithSupabase(session: Session): Promise<void> {
       })
       .select()
       .single();
-    
+
     if (error || !newSession) {
       console.error('Error creating session in Supabase:', error);
       return;
     }
-    
+    console.log('>>> Session insert successful. Session ID:', newSession.id);
+
     // За всеки факт в сесията, добавяме запис в session_facts
+    console.log('>>> Looping through session facts...');
     for (const factResponse of session.facts) {
+      console.log('>>> Processing factResponse:', JSON.stringify(factResponse, null, 2)); // Log inside loop
       // Намираме факта в базата данни
       const { data: factData } = await supabase
         .from('facts')
@@ -262,27 +242,68 @@ async function syncSessionWithSupabase(session: Session): Promise<void> {
         .eq('multiplicand', factResponse.fact.i)
         .eq('multiplier', factResponse.fact.j)
         .single();
-      
+
       if (!factData?.id) {
         console.error('Could not find fact in database:', factResponse.fact);
         continue;
       }
-      
-      // Добавяме запис в session_facts
-      await supabase
-        .from('session_facts')
-        .insert({
+      console.log(`>>> Found fact ID: ${factData.id} for ${factResponse.fact.i}x${factResponse.fact.j}. Attempting insert into session_facts...`);
+
+      try {
+        const sessionFactData = {
           session_id: newSession.id,
           fact_id: factData.id,
           is_correct: factResponse.isCorrect,
-          response_time_ms: factResponse.responseTime
-        });
+          response_time_ms: Math.round(factResponse.responseTime * 1000) // <-- Връщаме оригиналното име
+        };
+        console.log('>>> Attempting to insert into session_facts with data:', JSON.stringify(sessionFactData, null, 2));
+        const { error: sessionFactError } = await supabase
+          .from('session_facts')
+          .insert([sessionFactData])
+          .select();
+
+        if (sessionFactError) {
+          console.error('>>> Error inserting into session_facts:', JSON.stringify(sessionFactError, null, 2));
+          // Decide if you want to continue or stop processing this session
+        } else {
+          console.log('>>> Insert into session_facts successful.');
+        }
+      } catch (error) {
+        console.error('>>> CATCH block: Error during session_facts insert operation:', JSON.stringify(error, null, 2));
+      }
+
+      try {
+        const userFactData = {
+          user_id: userId,
+          fact_id: factData.id,
+          correct_count: factResponse.fact.correctCount,
+          incorrect_count: factResponse.fact.wrongCount,
+          last_seen_at: factResponse.fact.lastPracticed,
+          difficulty_rating: factResponse.fact.avgTime ? factResponse.fact.avgTime / 1000 : 5.0
+        };
+        console.log('>>> Prepared user_facts payload:', JSON.stringify(userFactData, null, 2));
+        // Upsert user_facts to handle insert or update in one call with detailed logging
+        try {
+          const { data: ufData, error: userFactError, status: ufStatus } = await supabase
+            .from('user_facts')
+            .upsert([userFactData], { onConflict: 'user_id,fact_id', ignoreDuplicates: false })
+            .select();
+          if (userFactError) {
+            console.error('>>> Error upserting user_facts:', JSON.stringify(userFactError, null, 2), 'status:', ufStatus, 'response:', ufData);
+          } else {
+            console.log('>>> Upsert user_facts success:', ufData);
+          }
+        } catch (e) {
+          console.error('>>> Exception upserting user_facts:', e);
+        }
+      } catch (error) {
+        console.error('>>> CATCH block: Error during user_facts upsert operation:', JSON.stringify(error, null, 2));
+      }
     }
-    
-    console.log('Session successfully synced with Supabase');
-  } catch (e) {
-    console.error('Error syncing session with Supabase:', e);
-    useSupabase = false; // Изключваме Supabase при грешка
+
+    console.log('>>> Finished looping through facts. Session sync attempt finished.');
+  } catch (error) {
+    console.error('>>> CATCH block: Error during the overall session sync process:', JSON.stringify(error, null, 2));
   }
 }
 

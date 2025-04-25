@@ -201,78 +201,54 @@ export async function recordFactResponse(
   isCorrect: boolean,
   responseTimeMs: number
 ) {
-  // Записваме отговора в текущата сесия
+  // Записваме отговора в session_facts и взимаме потребител
   const { error: sessionFactError } = await supabase
     .from('session_facts')
-    .insert([{
-      session_id: sessionId,
-      fact_id: factId,
-      is_correct: isCorrect,
-      response_time_ms: responseTimeMs
-    }]);
-  
-  if (sessionFactError) {
-    console.error('Error recording session fact:', sessionFactError);
-  }
-  
-  // Обновяваме user_facts информацията за този факт
-  const { data: userData } = await supabase.auth.getUser();
+    .insert([{ session_id: sessionId, fact_id: factId, is_correct: isCorrect, response_time_ms: responseTimeMs }])
+    .select();
+  if (sessionFactError) console.error('Error recording session fact:', sessionFactError);
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
   const userId = userData.user?.id;
-  
-  if (!userId) return;
-  
-  // Проверяваме дали вече има запис за този факт
-  const { data: existingUserFact, error: existingFactError } = await supabase
+  if (userError || !userId) {
+    console.error('Error getting user or no user:', userError);
+    return;
+  }
+
+  // Вземаме съществуващите стойности от user_facts
+  const { data: existingUserFact, error: existingError } = await supabase
     .from('user_facts')
-    .select('*')
+    .select('correct_count, incorrect_count, difficulty_rating')
     .eq('user_id', userId)
     .eq('fact_id', factId)
     .maybeSingle();
-  
-  if (existingFactError) {
-    console.error('Error checking user fact:', existingFactError);
+  if (existingError) {
+    console.error('Error fetching user_fact:', existingError);
     return;
   }
-  
-  if (existingUserFact) {
-    // Ако има запис, обновяваме го
-    const { error: updateError } = await supabase
-      .from('user_facts')
-      .update({
-        correct_count: existingUserFact.correct_count + (isCorrect ? 1 : 0),
-        incorrect_count: existingUserFact.incorrect_count + (isCorrect ? 0 : 1),
-        last_seen_at: new Date().toISOString(),
-        // Актуализираме рейтинга за трудност - намаляваме го при правилен отговор, увеличаваме при грешен
-        difficulty_rating: Math.max(
-          1,
-          Math.min(
-            10,
-            existingUserFact.difficulty_rating + (isCorrect ? -0.2 : 0.5)
-          )
-        ),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', existingUserFact.id);
-    
-    if (updateError) {
-      console.error('Error updating user fact:', updateError);
-    }
+
+  const newCorrect = (existingUserFact?.correct_count || 0) + (isCorrect ? 1 : 0);
+  const newIncorrect = (existingUserFact?.incorrect_count || 0) + (isCorrect ? 0 : 1);
+  const newDifficulty = existingUserFact
+    ? Math.max(1, Math.min(10, existingUserFact.difficulty_rating + (isCorrect ? -0.2 : 0.5)))
+    : 5 + (isCorrect ? -0.2 : 0.5);
+
+  const userFactPayload = {
+    user_id: userId,
+    fact_id: factId,
+    correct_count: newCorrect,
+    incorrect_count: newIncorrect,
+    last_seen_at: new Date().toISOString(),
+    difficulty_rating: newDifficulty
+  };
+
+  const { data: upsertData, error: userFactError } = await supabase
+    .from('user_facts')
+    .upsert([userFactPayload], { onConflict: 'user_id,fact_id' })
+    .select();
+  if (userFactError) {
+    console.error('Error upserting user_facts:', JSON.stringify(userFactError, null, 2), 'data:', upsertData);
   } else {
-    // Ако няма запис, създаваме нов
-    const { error: insertError } = await supabase
-      .from('user_facts')
-      .insert([{
-        user_id: userId,
-        fact_id: factId,
-        correct_count: isCorrect ? 1 : 0,
-        incorrect_count: isCorrect ? 0 : 1,
-        last_seen_at: new Date().toISOString(),
-        // Стартов рейтинг за трудност - 5 е среден
-        difficulty_rating: 5 + (isCorrect ? -0.2 : 0.5)
-      }]);
-    
-    if (insertError) {
-      console.error('Error inserting user fact:', insertError);
-    }
+    console.log('Upserted user_facts:', upsertData);
   }
 }
