@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, getCurrentUserId } from '../services/supabase';
-import Chart from 'chart.js/auto';
+import { Chart, registerables } from 'chart.js';
+
+// Регистрираме компонентите на Chart.js
+Chart.register(...registerables);
 
 interface DashboardProps {
   onClose: () => void;
