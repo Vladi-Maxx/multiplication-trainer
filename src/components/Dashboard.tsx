@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, getCurrentUserId } from '../services/supabase';
+import Chart from 'chart.js/auto';
 
 interface DashboardProps {
   onClose: () => void;
@@ -30,9 +31,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     bestAccuracy: 0,
     longestTraining: 0,
   });
+  
+  // Референции за графиките
+  const trainingsChartRef = useRef<HTMLCanvasElement>(null);
+  const accuracyChartRef = useRef<HTMLCanvasElement>(null);
+  const trainingsChartInstance = useRef<Chart | null>(null);
+  const accuracyChartInstance = useRef<Chart | null>(null);
 
   useEffect(() => {
     fetchTrainingData();
+    
+    // Почистваме графиките при размонтиране
+    return () => {
+      if (trainingsChartInstance.current) {
+        trainingsChartInstance.current.destroy();
+      }
+      if (accuracyChartInstance.current) {
+        accuracyChartInstance.current.destroy();
+      }
+    };
   }, []);
 
   const fetchTrainingData = async () => {
@@ -59,6 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
 
       setTrainings(data || []);
       calculateStats(data || []);
+      renderCharts(data || []);
       setLoading(false);
     } catch (err) {
       console.error('Грешка при зареждане на данни за тренировките:', err);
@@ -67,6 +85,126 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     }
   };
 
+  // Подготвяне на данни и рендериране на графики
+  const renderCharts = (data: Training[]) => {
+    if (!data || data.length === 0 || !trainingsChartRef.current || !accuracyChartRef.current) {
+      return;
+    }
+    
+    // Групираме тренировките по дни
+    const trainingsByDay = data.reduce((acc, training) => {
+      if (!training.started_at) return acc;
+      
+      // Форматиране на датата във формат YYYY-MM-DD
+      const date = new Date(training.started_at).toISOString().split('T')[0];
+      
+      if (!acc[date]) {
+        acc[date] = {
+          count: 0,
+          totalCorrect: 0,
+          totalProblems: 0
+        };
+      }
+      
+      // Броим тренировките за този ден
+      acc[date].count++;
+      
+      // Смятаме правилните отговори и общия брой задачи за този ден
+      if (training.facts && Array.isArray(training.facts)) {
+        const correctCount = training.facts.filter(fact => fact.isCorrect).length;
+        acc[date].totalCorrect += correctCount;
+        acc[date].totalProblems += training.facts.length;
+      }
+      
+      return acc;
+    }, {} as Record<string, { count: number, totalCorrect: number, totalProblems: number }>);
+    
+    // Подготвяме данните за графиките, сортирани по дата
+    const sortedDates = Object.keys(trainingsByDay).sort();
+    const formattedDates = sortedDates.map(date => {
+      // Форматираме датата за показване като dd.MM
+      const [year, month, day] = date.split('-');
+      return `${day}.${month}`;
+    });
+    
+    const trainingCounts = sortedDates.map(date => trainingsByDay[date].count);
+    
+    const accuracyData = sortedDates.map(date => {
+      const dayData = trainingsByDay[date];
+      return dayData.totalProblems > 0
+        ? Math.round((dayData.totalCorrect / dayData.totalProblems) * 100)
+        : 0;
+    });
+    
+    // Графика за брой тренировки по дни
+    if (trainingsChartInstance.current) {
+      trainingsChartInstance.current.destroy();
+    }
+    
+    const trainingsCtx = trainingsChartRef.current.getContext('2d');
+    trainingsChartInstance.current = new Chart(trainingsCtx!, {
+      type: 'bar',
+      data: {
+        labels: formattedDates,
+        datasets: [{
+          label: 'Брой тренировки',
+          data: trainingCounts,
+          backgroundColor: 'rgba(139, 92, 246, 0.7)',
+          borderColor: 'rgba(139, 92, 246, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+    
+    // Графика за точност по дни
+    if (accuracyChartInstance.current) {
+      accuracyChartInstance.current.destroy();
+    }
+    
+    const accuracyCtx = accuracyChartRef.current.getContext('2d');
+    accuracyChartInstance.current = new Chart(accuracyCtx!, {
+      type: 'line',
+      data: {
+        labels: formattedDates,
+        datasets: [{
+          label: 'Точност (%)',
+          data: accuracyData,
+          fill: false,
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          borderColor: 'rgba(16, 185, 129, 1)',
+          tension: 0.4,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: {
+              display: true,
+              text: '%'
+            }
+          }
+        }
+      }
+    });
+  };
+  
   const calculateStats = (data: Training[]) => {
     if (!data || data.length === 0) {
       return;
@@ -216,6 +354,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
               </div>
             </div>
 
+            {/* Графики */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Графика за броя тренировки по дни */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Брой тренировки по дни</h3>
+                <div className="chart-container" style={{ height: '250px', position: 'relative' }}>
+                  <canvas ref={trainingsChartRef}></canvas>
+                </div>
+              </div>
+              
+              {/* Графика за точност по дни */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Точност по дни</h3>
+                <div className="chart-container" style={{ height: '250px', position: 'relative' }}>
+                  <canvas ref={accuracyChartRef}></canvas>
+                </div>
+              </div>
+            </div>
+            
             {/* Последни тренировки */}
             <div className="bg-white p-6 rounded-lg shadow mb-8">
               <h2 className="text-xl font-semibold mb-6">Последни тренировки</h2>
@@ -275,15 +432,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                   </table>
                 </div>
               )}
-            </div>
-
-            {/* Бележка за родители */}
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
-              <h3 className="text-lg font-medium text-blue-800 mb-2">💡 Съвет за родителите</h3>
-              <p className="text-blue-700">
-                Редовните кратки тренировки са по-ефективни от дългите и редки. Насърчавайте детето да тренира по 10-15 минути на ден, 
-                вместо по час-два веднъж седмично. Наблюдавайте процента на точност и времето за отговор, за да видите подобрението.
-              </p>
             </div>
           </>
         )}
