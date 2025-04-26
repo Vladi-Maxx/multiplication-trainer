@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
+// Добавяме типа на Vite environment variables
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
+  readonly VITE_SUPABASE_USER_EMAIL: string;
+  readonly VITE_SUPABASE_USER_PASSWORD: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Вземаме настройките от средата - така поддържаме различни среди (dev, test, prod)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '***REMOVED***';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';

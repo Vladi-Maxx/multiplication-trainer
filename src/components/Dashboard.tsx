@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, getCurrentUserId } from '../services/supabase';
 import { Chart, registerables } from 'chart.js';
+import FactsStats from './FactsStats';
 
 // Регистрираме компонентите на Chart.js
 Chart.register(...registerables);
@@ -48,6 +49,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [userFacts, setUserFacts] = useState<UserFact[]>([]);
   const [allFacts, setAllFacts] = useState<Fact[]>([]);
+  const [tooltipInfo, setTooltipInfo] = useState<{visible: boolean, x: number, y: number, content: React.ReactNode}>({ 
+    visible: false, 
+    x: 0, 
+    y: 0, 
+    content: null 
+  });
   const [stats, setStats] = useState({
     totalTrainings: 0,
     totalProblems: 0,
@@ -55,6 +62,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     averageTimePerProblem: 0,
     bestAccuracy: 0,
     longestTraining: 0,
+    masteredFacts: 0,
+    inProgressFacts: 0,
+    challengingFacts: 0,
   });
   
   // Референции за графиките
@@ -110,8 +120,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
         return;
       }
       
-      setUserFacts(userFactsData || []);
-      setAllFacts(allFactsData || []);
+      const userFactsArray = userFactsData || [];
+      const allFactsArray = allFactsData || [];
+      
+      // Изчисляваме научените факти
+      const mastered = userFactsArray.filter(fact => fact.difficulty_rating < 3).length;
+      const inProgress = userFactsArray.filter(fact => fact.difficulty_rating >= 3 && fact.difficulty_rating <= 6).length;
+      const challenging = userFactsArray.filter(fact => fact.difficulty_rating > 6).length;
+      
+      setStats(prev => ({
+        ...prev,
+        masteredFacts: mastered,
+        inProgressFacts: inProgress,
+        challengingFacts: challenging
+      }));
+      
+      setUserFacts(userFactsArray);
+      setAllFacts(allFactsArray);
       
     } catch (err) {
       console.error('Грешка при зареждане на данни за фактите:', err);
@@ -406,18 +431,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                     <span className="text-gray-600">Най-дълга тренировка</span>
                     <span className="font-medium">{stats.longestTraining} мин</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-lg font-semibold mb-4 text-gray-700">Постижения</h2>
-                <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Най-добра точност</span>
                     <span className="font-medium">{stats.bestAccuracy}%</span>
                   </div>
                 </div>
               </div>
+              
+              <FactsStats 
+                masteredFacts={stats.masteredFacts}
+                inProgressFacts={stats.inProgressFacts}
+                challengingFacts={stats.challengingFacts}
+              />
             </div>
 
             {/* Графики */}
@@ -619,7 +644,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                             <div 
                               key={`${row}-${col}`}
                               className="heatmap-cell" 
-                              title={tooltipText}
+                              onMouseEnter={(e) => {
+                                const correct = userFact ? userFact.correct_count || 0 : 0;
+                                const incorrect = userFact ? userFact.incorrect_count || 0 : 0;
+                                const attempts = correct + incorrect;
+                                const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
+                                
+                                const content = (
+                                  <div className="bg-white p-3 rounded shadow-lg border border-gray-200">
+                                    <div className="text-lg font-bold text-purple-800">{row} × {col} = {row * col}</div>
+                                    <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+                                      <div className="text-gray-600">Общо опити:</div>
+                                      <div className="font-medium">{attempts}</div>
+                                      
+                                      <div className="text-gray-600">Правилни:</div>
+                                      <div className="font-medium text-green-600">{correct}</div>
+                                      
+                                      <div className="text-gray-600">Грешни:</div>
+                                      <div className="font-medium text-red-600">{incorrect}</div>
+                                      
+                                      <div className="text-gray-600">Точност:</div>
+                                      <div className="font-medium flex items-center">
+                                        <span>{accuracy}%</span>
+                                        <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className={`h-2 rounded-full ${
+                                              accuracy >= 80 ? 'bg-green-500' : 
+                                              accuracy >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                            }`} 
+                                            style={{ width: `${accuracy}%` }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="text-gray-600">Трудност:</div>
+                                      <div className="font-medium">
+                                        {userFact?.difficulty_rating ? userFact.difficulty_rating.toFixed(1) : "Няма данни"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                                
+                                setTooltipInfo({ 
+                                  visible: true, 
+                                  x: e.clientX, 
+                                  y: e.clientY, 
+                                  content 
+                                });
+                              }}
+                              onMouseLeave={() => setTooltipInfo(prev => ({ ...prev, visible: false }))}
+                              onMouseMove={(e) => {
+                                if (tooltipInfo.visible) {
+                                  setTooltipInfo(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
+                                }
+                              }}
                               style={{
                                 aspectRatio: '1',
                                 display: 'flex',
@@ -650,6 +728,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
           </>
         )}
       </div>
+      
+      {/* Интерактивен тултип */}
+      {tooltipInfo.visible && (
+        <div 
+          style={{
+            position: 'fixed', 
+            top: tooltipInfo.y + 10, 
+            left: tooltipInfo.x + 10,
+            zIndex: 1000,
+            pointerEvents: 'none'
+          }}
+        >
+          {tooltipInfo.content}
+        </div>
+      )}
     </div>
   );
 };
