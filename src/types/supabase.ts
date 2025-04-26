@@ -9,6 +9,42 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      trainings: {
+        Row: {
+          id: string
+          user_id: string
+          started_at: string
+          finished_at: string | null
+          facts: Json | null
+          score: number
+          total_time: number
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          started_at?: string
+          finished_at?: string | null
+          facts?: Json | null
+          score?: number
+          total_time?: number
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          started_at?: string
+          finished_at?: string | null
+          facts?: Json | null
+          score?: number
+          total_time?: number
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       facts: {
         Row: {
           id: string

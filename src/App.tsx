@@ -12,6 +12,7 @@ const POINT_CORRECT = 10
 const POINT_WRONG = -5
 
 import PuzzleSVG from './components/PuzzleSVG';
+import Dashboard from './components/Dashboard';
 
 export default function App() {
   const [score, setScore] = useState(0)
@@ -20,6 +21,7 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [lastCorrect, setLastCorrect] = useState(null)
   const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
+  const [showDashboard, setShowDashboard] = useState(false);
   const progressRef = React.useRef<HTMLDivElement>(null);
   const [progressWidth, setProgressWidth] = React.useState(0);
   React.useEffect(() => {
@@ -180,6 +182,10 @@ export default function App() {
     startTraining(); // При рестарт започни нова тренировка
   }
 
+  if (showDashboard) {
+    return <Dashboard onClose={() => setShowDashboard(false)} />
+  }
+  
   if (paused) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
@@ -199,6 +205,15 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
+      {/* Родителски контролен бутон */}
+      <button 
+        onClick={() => setShowDashboard(true)}
+        className="absolute top-4 right-4 z-50 px-3 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 focus:outline-none flex items-center justify-center shadow-lg"
+        title="Родителски дашборд"
+      >
+        <span className="text-xl">📊</span>
+      </button>
+      
       {/* progress bar */}
       <div className="progress-container" ref={progressRef} style={{position:'relative'}}>
         <div
