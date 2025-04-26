@@ -1,6 +1,6 @@
 import React from 'react';
 import HeatMap from './HeatMap';
-import { loadFacts } from '../services/storage';
+import { getTrainings } from '../services/storage';
 
 interface Props {
   score: number
@@ -8,7 +8,10 @@ interface Props {
 }
 
 export default function Summary({ score, onRestart }: Props) {
-  const facts = loadFacts();
+  // Вземаме последната завършена тренировка
+  const trainings = getTrainings();
+  const lastTraining = trainings.length > 0 ? trainings[trainings.length - 1] : null;
+  const facts = lastTraining ? lastTraining.facts.map(fr => fr.fact) : [];
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6">
       <h1 className="text-4xl font-bold">Браво! 🎉</h1>

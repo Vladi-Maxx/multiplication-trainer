@@ -68,10 +68,26 @@ export default function App() {
   const handleSubmit = (ok, duration, timedOut) => {
     setLastCorrect(ok);
     if (timedOut) {
-      setPaused(true)
-      finishTraining(); // При timeout приключи тренировката
-      return
+      setPaused(true);
+      return;
     }
+    // Добави отговора към текущата тренировка само ако timedOut е false
+    addFactToCurrentTraining({
+      fact: {
+        i: fact.i,
+        j: fact.j,
+        correctCount: 0,
+        wrongCount: 0,
+        streak: 0,
+        avgTime: 0,
+        attempts: 0,
+        box: 1,
+        lastPracticed: new Date().toISOString(),
+        nextPractice: new Date().toISOString()
+      },
+      isCorrect: ok,
+      responseTime: duration
+    });
     setPuzzleRevealedCount(prev => {
       if (ok) return Math.min(prev + 2, 60);
       else return Math.max(prev - 1, 0);
@@ -97,13 +113,6 @@ export default function App() {
             lastPracticed: new Date().toISOString(),
             nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString() 
           };
-
-      // Добавяме отговора към текущата тренировка
-      addFactToCurrentTraining({
-        fact: record,
-        isCorrect: ok,
-        responseTime: duration
-      });
 
       // Update stats based on correctness
       const now = new Date().toISOString();
