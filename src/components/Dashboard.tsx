@@ -22,10 +22,32 @@ interface Training {
   created_at: string;
 }
 
+interface UserFact {
+  id: string;
+  user_id: string;
+  fact_id: string;
+  difficulty_rating: number;
+  correct_count: number;
+  incorrect_count: number;
+  facts?: {
+    id: string;
+    multiplicand: number;
+    multiplier: number;
+  }
+}
+
+interface Fact {
+  id: string;
+  multiplicand: number;
+  multiplier: number;
+}
+
 const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userFacts, setUserFacts] = useState<UserFact[]>([]);
+  const [allFacts, setAllFacts] = useState<Fact[]>([]);
   const [stats, setStats] = useState({
     totalTrainings: 0,
     totalProblems: 0,
@@ -43,6 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
 
   useEffect(() => {
     fetchTrainingData();
+    fetchFactsData();
     
     // Почистваме графиките при размонтиране
     return () => {
@@ -54,6 +77,46 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
       }
     };
   }, []);
+  
+  // Извличане на данни за фактите за топлинната карта
+  const fetchFactsData = async () => {
+    try {
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        return;
+      }
+      
+      // Извличаме фактите на потребителя
+      const { data: userFactsData, error: userFactsError } = await supabase
+        .from('user_facts')
+        .select('*, facts(*)')
+        .eq('user_id', userId);
+        
+      if (userFactsError) {
+        console.error('Грешка при извличане на факти на потребителя:', userFactsError);
+        return;
+      }
+      
+      // Извличаме всички факти от таблицата за умножение
+      const { data: allFactsData, error: allFactsError } = await supabase
+        .from('facts')
+        .select('*')
+        .lte('multiplicand', 10)
+        .lte('multiplier', 10);
+        
+      if (allFactsError) {
+        console.error('Грешка при извличане на всички факти:', allFactsError);
+        return;
+      }
+      
+      setUserFacts(userFactsData || []);
+      setAllFacts(allFactsData || []);
+      
+    } catch (err) {
+      console.error('Грешка при зареждане на данни за фактите:', err);
+    }
+  };
 
   const fetchTrainingData = async () => {
     try {
@@ -433,6 +496,154 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+            
+            {/* Топлинна карта на фактите */}
+            <div className="bg-white p-6 rounded-lg shadow mb-8">
+              <h2 className="text-xl font-semibold mb-6">Топлинна карта на таблицата за умножение</h2>
+              
+              {allFacts.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Зареждане на данни за топлинната карта...</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <div 
+                    className="heatmap-grid"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(11, 1fr)',
+                      gap: '4px',
+                      maxWidth: '100%'
+                    }}
+                  >
+                    {/* Празна клетка в ъгъла */}
+                    <div 
+                      className="heatmap-cell" 
+                      style={{
+                        aspectRatio: '1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f3e8ff',
+                        color: '#6b21a8',
+                        fontWeight: 'bold',
+                        borderRadius: '6px'
+                      }}>
+                    </div>
+                    
+                    {/* Заглавия на колоните */}
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                      <div 
+                        key={`col-${num}`}
+                        className="heatmap-cell" 
+                        style={{
+                          aspectRatio: '1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#f3e8ff',
+                          color: '#6b21a8',
+                          fontWeight: 'bold',
+                          borderRadius: '6px'
+                        }}
+                      >
+                        {num}
+                      </div>
+                    ))}
+                    
+                    {/* Тялото на топлинната карта */}
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(row => (
+                      <React.Fragment key={`row-${row}`}>
+                        {/* Заглавие на реда */}
+                        <div 
+                          className="heatmap-cell" 
+                          style={{
+                            aspectRatio: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#f3e8ff',
+                            color: '#6b21a8',
+                            fontWeight: 'bold',
+                            borderRadius: '6px'
+                          }}
+                        >
+                          {row}
+                        </div>
+                        
+                        {/* Клетки с факти */}
+                        {Array.from({ length: 10 }, (_, j) => j + 1).map(col => {
+                          // Намираме факта от базовите данни
+                          const fact = allFacts.find(f => f.multiplicand === row && f.multiplier === col);
+                          if (!fact) return null;
+                          
+                          // Намираме потребителския факт, ако съществува
+                          const userFact = userFacts.find(uf => uf.fact_id === fact.id);
+                          
+                          // Определяме цвета базиран на точността
+                          let backgroundColor = '#f0f0f0'; // Сиво по подразбиране за неопитани факти
+                          let textColor = 'rgba(0, 0, 0, 0.7)';
+                          let tooltipText = `${row}×${col}=${row*col}\nНеопитан факт`;
+                          let accuracyText = '';
+                          
+                          if (userFact) {
+                            const correct = userFact.correct_count || 0;
+                            const incorrect = userFact.incorrect_count || 0;
+                            const attempts = correct + incorrect;
+                            const accuracy = attempts > 0 ? correct / attempts : 0;
+                            
+                            // Винаги показваме цвят ако имаме потребителски факт
+                            if (attempts > 0) {
+                              if (accuracy >= 0.8) {
+                                // Зелено за добро представяне
+                                backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                              } else if (accuracy >= 0.5) {
+                                // Жълто за средно представяне
+                                backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                              } else {
+                                // Червено за слабо представяне
+                                backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`;
+                                textColor = 'rgba(255, 255, 255, 0.87)';
+                              }
+                            } else {
+                              // За факти без опити, но с потребителски запис
+                              backgroundColor = `rgba(158, 158, 158, 0.3)`; // Сиво за неопитани факти
+                            }
+                            
+                            tooltipText = `${row}×${col}=${row*col}\nОпити: ${attempts}, Верни: ${correct}\nТочност: ${Math.round(accuracy * 100)}%`;
+                            accuracyText = `${Math.round(accuracy * 100)}%`;
+                          }
+                          
+                          return (
+                            <div 
+                              key={`${row}-${col}`}
+                              className="heatmap-cell" 
+                              title={tooltipText}
+                              style={{
+                                aspectRatio: '1',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor,
+                                color: textColor,
+                                borderRadius: '6px',
+                                fontWeight: 500,
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                cursor: 'help'
+                              }}
+                            >
+                              <div style={{ fontSize: '1.2rem' }}>{row * col}</div>
+                              {accuracyText && (
+                                <div style={{ fontSize: '0.7rem', marginTop: '4px' }}>{accuracyText}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
