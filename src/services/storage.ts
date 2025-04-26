@@ -254,13 +254,6 @@ export function logSession(session: Session): void {
     }
     
     localStorage.setItem('sessions', JSON.stringify(sessions));
-    
-    // Стартираме асинхронно запазване в Supabase, без да чакаме
-    if (useSupabase) {
-      syncSessionWithSupabase(session).catch(e => {
-        console.error('Failed to sync session with Supabase:', e);
-      });
-    }
   } catch (e) {
     console.error('logSession: failed to save sessions', e);
     
@@ -273,117 +266,6 @@ export function logSession(session: Session): void {
         console.error('Failed to clear sessions:', clearError);
       }
     }
-  }
-}
-
-/**
- * Асинхронно синхронизира сесия със Supabase
- */
-async function syncSessionWithSupabase(session: Session): Promise<void> {
-  if (!useSupabase) return;
-   // Log at entry
-
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    
-    if (!userId) {
-      console.warn('syncSessionWithSupabase: No authenticated user');
-      return;
-    }
-
-    // Създаваме нова сесия в Supabase
-    
-    const { data: newSession, error } = await supabase
-      .from('sessions')
-      .insert({
-        user_id: userId,
-        start_time: session.startTime,
-        end_time: session.endTime,
-        fact_count: session.facts.length,
-        correct_count: session.facts.filter(f => f.isCorrect).length,
-        incorrect_count: session.facts.filter(f => !f.isCorrect).length,
-        duration_seconds: session.durationSeconds
-      })
-      .select()
-      .single();
-
-    if (error || !newSession) {
-      console.error('Error creating session in Supabase:', error);
-      return;
-    }
-
-    // За всеки факт в сесията, добавяме запис в session_facts
-    
-    for (const factResponse of session.facts) {
-      
-      // Намираме факта в базата данни
-      const { data: factData } = await supabase
-        .from('facts')
-        .select('id')
-        .eq('multiplicand', factResponse.fact.i)
-        .eq('multiplier', factResponse.fact.j)
-        .single();
-
-      if (!factData?.id) {
-        console.error('Could not find fact in database:', factResponse.fact);
-        continue;
-      }
-
-      try {
-        const sessionFactData = {
-          session_id: newSession.id,
-          fact_id: factData.id,
-          is_correct: factResponse.isCorrect,
-          response_time_ms: Math.round(factResponse.responseTime * 1000) // <-- Връщаме оригиналното име
-        };
-        
-        const { error: sessionFactError } = await supabase
-          .from('session_facts')
-          .insert([sessionFactData])
-          .select();
-
-        if (sessionFactError) {
-          console.error('Error inserting into session_facts:', sessionFactError);
-        } else {
-          
-        }
-      } catch (error) {
-        console.error('Error during session_facts insert operation:', error);
-      }
-
-      try {
-        const userFactData = {
-          user_id: userId,
-          fact_id: factData.id,
-          correct_count: factResponse.fact.correctCount,
-          incorrect_count: factResponse.fact.wrongCount,
-          last_seen_at: factResponse.fact.lastPracticed,
-          difficulty_rating: factResponse.fact.avgTime ? factResponse.fact.avgTime / 1000 : 5.0
-        };
-        
-        // Upsert user_facts to handle insert or update in one call with detailed logging
-        try {
-          const { data: ufData, error: userFactError, status: ufStatus } = await supabase
-            .from('user_facts')
-            .upsert([userFactData], { onConflict: 'user_id,fact_id', ignoreDuplicates: false })
-            .select();
-          if (userFactError) {
-            console.error('Error upserting user_facts:', JSON.stringify(userFactError, null, 2), 'status:', ufStatus, 'response:', ufData);
-          } else {
-            
-          }
-        } catch (e) {
-          console.error('Exception upserting user_facts:', e);
-        }
-      } catch (error) {
-        console.error('Error during user_facts upsert operation:', error);
-      }
-    }
-
-    
-  } catch (error) {
-    console.error('>>> CATCH block: Error during the overall session sync process:', JSON.stringify(error, null, 2));
   }
 }
 
