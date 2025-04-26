@@ -114,37 +114,13 @@ export default function HeatMap({ facts }: Props) {
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-center mb-4 text-purple-800">Таблица на прогреса</h2>
-      <div className="stats-row flex justify-around mb-6">
-        <div className="stat-item bg-purple-50 p-3 rounded-md shadow-sm">
-          <div className="text-sm text-purple-700">Общо задачи</div>
-          <div className="text-2xl font-bold text-purple-900">{aggregatedFacts.reduce((sum, f) => sum + f.attempts, 0)}</div>
-        </div>
-        <div className="stat-item bg-green-50 p-3 rounded-md shadow-sm">
-          <div className="text-sm text-green-700">Правилни</div>
-          <div className="text-2xl font-bold text-green-900">{aggregatedFacts.reduce((sum, f) => sum + f.correctCount, 0)}</div>
-        </div>
-        <div className="stat-item bg-blue-50 p-3 rounded-md shadow-sm">
-          <div className="text-sm text-blue-700">Средна точност</div>
-          <div className="text-2xl font-bold text-blue-900">
-            {Math.round(aggregatedFacts.reduce((sum, f) => sum + (f.attempts > 0 ? f.correctCount / f.attempts : 0), 0) / aggregatedFacts.filter(f => f.attempts > 0).length * 100) || 0}%
-          </div>
-        </div>
-      </div>
+
       <div>{rows}</div>
       <div className="mt-6 flex justify-center">
-        <div className="legend flex items-center space-x-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded bg-red-500 mr-2"></div>
-            <span className="text-sm">Нуждае се от практика</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded bg-amber-400 mr-2"></div>
-            <span className="text-sm">Учи се</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded bg-green-500 mr-2"></div>
-            <span className="text-sm">Научено</span>
-          </div>
+        <div className="legend flex items-center space-x-6 text-lg font-semibold">
+          <div className="flex items-center"><span className="inline-block w-7 h-7 rounded bg-red-400 mr-2"></span> <span className="text-red-500">Олеле! 😱</span></div>
+          <div className="flex items-center"><span className="inline-block w-7 h-7 rounded bg-yellow-300 mr-2"></span> <span className="text-yellow-600">Налучкване? 🤔</span></div>
+          <div className="flex items-center"><span className="inline-block w-7 h-7 rounded bg-green-400 mr-2"></span> <span className="text-green-600">Ти си Цар  👑</span></div>
         </div>
       </div>
     </div>
