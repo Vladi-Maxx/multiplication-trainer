@@ -26,18 +26,20 @@ export async function initializeSession(): Promise<boolean> {
     console.log('Опитвам влизане с имейл/парола...');
     
     // Използваме реален имейл и парола
+    // Имейл и парола се четат от .env файла (VITE_SUPABASE_USER_EMAIL, VITE_SUPABASE_USER_PASSWORD)
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: '***REMOVED***',
-      password: '***REMOVED***'
+      email: import.meta.env.VITE_SUPABASE_USER_EMAIL!,
+      password: import.meta.env.VITE_SUPABASE_USER_PASSWORD!
     });
     
     if (error) {
       // Ако потребителят не съществува, опитваме да го създадем
       if (error.message.includes('Invalid login credentials')) {
         console.log('Потребителят не съществува, опитвам регистрация...');
+        // Имейл и парола се четат от .env файла (VITE_SUPABASE_USER_EMAIL, VITE_SUPABASE_USER_PASSWORD)
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: '***REMOVED***',
-          password: '***REMOVED***',
+          email: import.meta.env.VITE_SUPABASE_USER_EMAIL!,
+          password: import.meta.env.VITE_SUPABASE_USER_PASSWORD!,
           options: {
             data: {
               name: 'Влади'
@@ -250,5 +252,39 @@ export async function recordFactResponse(
     console.error('Error upserting user_facts:', JSON.stringify(userFactError, null, 2), 'data:', upsertData);
   } else {
     
+  }
+}
+import { Training } from './types';
+
+/**
+ * Записва тренировка в таблицата trainings в Supabase
+ */
+export async function saveTrainingToSupabase(training: Training): Promise<boolean> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      console.error('saveTrainingToSupabase: Няма автентикиран потребител');
+      return false;
+    }
+    const { error } = await supabase.from('trainings').insert([
+      {
+        user_id: userId,
+        started_at: training.startedAt,
+        finished_at: training.finishedAt,
+        facts: training.facts,
+        score: training.score,
+        total_time: training.totalResponseTime,
+        status: training.status,
+        created_at: new Date().toISOString()
+      }
+    ]);
+    if (error) {
+      console.error('saveTrainingToSupabase: Грешка при запис в Supabase', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('saveTrainingToSupabase: Exception', e);
+    return false;
   }
 }

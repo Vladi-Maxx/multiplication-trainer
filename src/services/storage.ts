@@ -63,6 +63,19 @@ export function finishTraining(): void {
   trainings.push(training);
   localStorage.setItem(TRAININGS_KEY, JSON.stringify(trainings));
   localStorage.removeItem(CURRENT_TRAINING_KEY);
+
+  // Асинхронно записваме тренировката и в Supabase, ако е активен
+  if (useSupabase) {
+    import('./supabase').then(({ saveTrainingToSupabase }) => {
+      saveTrainingToSupabase(training).then(success => {
+        if (!success) {
+          console.error('finishTraining: Неуспешен запис на тренировка в Supabase');
+        }
+      }).catch(e => {
+        console.error('finishTraining: Грешка при запис в Supabase:', e);
+      });
+    });
+  }
 }
 
 export function getTrainings(): Training[] {
