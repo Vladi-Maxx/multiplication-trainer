@@ -1,11 +1,29 @@
 import React from 'react'
-import type { Fact as StatFact } from '../services/types'
+interface FactResult {
+  i: number;
+  j: number;
+  isCorrect: boolean;
+}
 
 interface Props {
-  facts: StatFact[]
+  facts: FactResult[];
 }
 
 export default function HeatMap({ facts }: Props) {
+  // Агрегация само веднъж в началото на функцията
+  // Агрегирай по (i,j) - само брой опити и брой верни
+  const factMap = new Map<string, {i: number, j: number, attempts: number, correctCount: number}>();
+  for (const f of facts) {
+    const key = `${f.i}_${f.j}`;
+    if (!factMap.has(key)) {
+      factMap.set(key, {i: f.i, j: f.j, attempts: 0, correctCount: 0});
+    }
+    const entry = factMap.get(key)!;
+    entry.attempts += 1;
+    if (f.isCorrect) entry.correctCount += 1;
+  }
+  const aggregatedFacts = Array.from(factMap.values());
+
   // Показваме заглавните редове и колони за по-лесна навигация
   const headers: any[] = [
     // Ъгъл горе вляво (празен)
@@ -41,12 +59,11 @@ export default function HeatMap({ facts }: Props) {
     ]
     
     for (let j = 1; j <= 10; j++) {
-      const stat = facts.find(f => f.i === i && f.j === j)
+      const stat = aggregatedFacts.find(f => f.i === i && f.j === j)
       const attempts = stat?.attempts ?? 0
       const correct = stat?.correctCount ?? 0
       const accuracy = attempts ? correct / attempts : 0
-      const streak = stat?.streak ?? 0
-      const box = stat?.box ?? 1
+      
       
       // Определяме цвета базиран на точността
       let backgroundColor = '#f0f0f0' // Сиво по подразбиране за неопитани факти
@@ -73,7 +90,7 @@ export default function HeatMap({ facts }: Props) {
       rowCells.push(
         <div
           key={`${i}-${j}`}
-          title={`${i}×${j}=${i*j}\nОпити: ${attempts}, Верни: ${correct}, Точност: ${Math.round(accuracy * 100)}%${attempts > 0 ? `\nCтрийк: ${streak}, Ниво: ${box}` : ''}`}
+          title={`${i}×${j}=${i*j}\nОпити: ${attempts}, Верни: ${correct}, Точност: ${Math.round(accuracy * 100)}%`}
           style={{ 
             backgroundColor,
             color: textColor,
@@ -100,16 +117,16 @@ export default function HeatMap({ facts }: Props) {
       <div className="stats-row flex justify-around mb-6">
         <div className="stat-item bg-purple-50 p-3 rounded-md shadow-sm">
           <div className="text-sm text-purple-700">Общо задачи</div>
-          <div className="text-2xl font-bold text-purple-900">{facts.reduce((sum, f) => sum + f.attempts, 0)}</div>
+          <div className="text-2xl font-bold text-purple-900">{aggregatedFacts.reduce((sum, f) => sum + f.attempts, 0)}</div>
         </div>
         <div className="stat-item bg-green-50 p-3 rounded-md shadow-sm">
           <div className="text-sm text-green-700">Правилни</div>
-          <div className="text-2xl font-bold text-green-900">{facts.reduce((sum, f) => sum + f.correctCount, 0)}</div>
+          <div className="text-2xl font-bold text-green-900">{aggregatedFacts.reduce((sum, f) => sum + f.correctCount, 0)}</div>
         </div>
         <div className="stat-item bg-blue-50 p-3 rounded-md shadow-sm">
           <div className="text-sm text-blue-700">Средна точност</div>
           <div className="text-2xl font-bold text-blue-900">
-            {Math.round(facts.reduce((sum, f) => sum + (f.attempts > 0 ? f.correctCount / f.attempts : 0), 0) / facts.filter(f => f.attempts > 0).length * 100) || 0}%
+            {Math.round(aggregatedFacts.reduce((sum, f) => sum + (f.attempts > 0 ? f.correctCount / f.attempts : 0), 0) / aggregatedFacts.filter(f => f.attempts > 0).length * 100) || 0}%
           </div>
         </div>
       </div>
