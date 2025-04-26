@@ -92,8 +92,6 @@ export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
     const newParticles: Particle[] = [];
     const particleCount = 20 + Math.floor(Math.random() * 15); // 20-35 частици - повече за по-видим ефект
     
-    console.log(`Създавам ${particleCount} частици за плочка #${tileIndex} на позиция (${centerX},${centerY})`);
-    
     for (let i = 0; i < particleCount; i++) {
       // Случайна посока и скорост за частицата
       const angle = Math.random() * Math.PI * 2; // Случаен ъгъл в радиани (0-360°)
@@ -145,7 +143,7 @@ export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
     });
     
     // Логваме за дебъгване
-    console.log(`Създадени ${newParticles.length} частици. Общ брой частици: ${newParticles.length}`);
+    
   }, []);
   
   // Функция за анимиране на частиците

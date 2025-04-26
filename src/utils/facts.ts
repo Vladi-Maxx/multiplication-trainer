@@ -15,7 +15,7 @@ export function randomFact() {
         return !rec || new Date(rec.nextPractice) <= now
       })
     : allFacts
-  console.log(`[randomFact] dueFacts count: ${dueFacts.length}`)
+  
   const activeFacts = dueFacts.filter(fact => {
     const rec = stats.find(r => r.i === fact.i && r.j === fact.j)
     if (rec && rec.box >= 5 && rec.streak >= 3) {
@@ -41,7 +41,7 @@ export function randomFact() {
   let r = Math.random() * total
   for (const wItem of weighted) {
     if (r < wItem.weight) {
-      console.log(`[randomFact] selected: ${wItem.fact.i}x${wItem.fact.j}, weight: ${wItem.weight}`)
+      
       return wItem.fact
     }
     r -= wItem.weight

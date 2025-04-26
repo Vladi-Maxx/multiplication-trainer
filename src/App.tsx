@@ -47,7 +47,7 @@ export default function App() {
         const isConnected = await checkSupabaseConnection();
         
         if (isConnected) {
-          console.log('Свързани със Supabase, инициализираме базата...');
+          
           // Инициализираме фактите в базата (ако вече съществуват, няма да се променят)
           await initializeSupabaseFactsData();
         } else {
@@ -58,7 +58,7 @@ export default function App() {
       }
       
       // Зареждаме фактите от localStorage както преди
-      console.log('Loaded facts:', loadFacts());
+      loadFacts();
     };
     
     initializeApp();

@@ -17,7 +17,7 @@ export async function initializeSession(): Promise<boolean> {
   
   // Ако вече имаме валидна сесия, не правим нищо
   if (session) {
-    console.log('Вече имаме активна сесия за потребител:', session.user.email);
+    
     return true;
   }
 
@@ -50,7 +50,7 @@ export async function initializeSession(): Promise<boolean> {
           return false;
         }
         
-        console.log('Потребителят е създаден успешно! Проверете имейла си за потвърждение.');
+        
         return true;
       } else {
         console.error('Грешка при влизане:', error);
@@ -58,7 +58,7 @@ export async function initializeSession(): Promise<boolean> {
       }
     }
     
-    console.log('Успешно влизане като:', data.user?.email);
+    
     return true;
   } catch (e) {
     console.error('Грешка при автентикация:', e);
@@ -249,6 +249,6 @@ export async function recordFactResponse(
   if (userFactError) {
     console.error('Error upserting user_facts:', JSON.stringify(userFactError, null, 2), 'data:', upsertData);
   } else {
-    console.log('Upserted user_facts:', upsertData);
+    
   }
 }
