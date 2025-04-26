@@ -3,7 +3,7 @@ import FlashCard, { Fact } from './components/FlashCard.tsx'
 import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
-import { loadFacts, saveFacts, logSession, initializeSupabaseFactsData, checkSupabaseConnection } from './services/storage'
+import { loadFacts, saveFacts, logSession, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
 import { initializeSession } from './services/supabase'
 import dragonPic from '../Pics/Dragon 1.png'
 
@@ -36,6 +36,7 @@ export default function App() {
   useEffect(() => {
     // Инициализираме Supabase при стартиране на приложението
     const initializeApp = async () => {
+      startTraining(); // стартираме тренировка при първоначално зареждане
       try {
         // Първо инициализираме сесията - влизаме с фиксирания потребител
         const isAuthenticated = await initializeSession();
@@ -68,6 +69,7 @@ export default function App() {
     setLastCorrect(ok);
     if (timedOut) {
       setPaused(true)
+      finishTraining(); // При timeout приключи тренировката
       return
     }
     setPuzzleRevealedCount(prev => {
@@ -96,6 +98,13 @@ export default function App() {
             nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString() 
           };
 
+      // Добавяме отговора към текущата тренировка
+      addFactToCurrentTraining({
+        fact: record,
+        isCorrect: ok,
+        responseTime: duration
+      });
+
       // Update stats based on correctness
       const now = new Date().toISOString();
       // update metrics
@@ -123,6 +132,7 @@ export default function App() {
       saveFacts(updatedFacts)
       if (next >= TARGET_SCORE) {
         setFinished(true)
+        finishTraining(); // При достигане на целта приключи тренировката
       }
       // Създаваме и записваме сесията в Supabase
       logSession({
@@ -158,6 +168,7 @@ export default function App() {
     setScore(0)
     setFact(randomFact())
     setFinished(false)
+    startTraining(); // При рестарт започни нова тренировка
   }
 
   if (paused) {
@@ -168,7 +179,7 @@ export default function App() {
           <button onClick={() => { setPaused(false); setFact(randomFact()) }} className="bg-blue-500 text-white px-4 py-2 rounded">
             Продължи
           </button>
-          <button onClick={() => { setPaused(false); setFinished(true); }} className="bg-red-500 text-white px-4 py-2 rounded">
+          <button onClick={() => { setPaused(false); setFinished(true); finishTraining(); }} className="bg-red-500 text-white px-4 py-2 rounded">
             Край на играта
           </button>
         </div>

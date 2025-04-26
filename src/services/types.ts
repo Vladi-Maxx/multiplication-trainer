@@ -14,7 +14,19 @@ export interface Fact {
 export interface FactResponse {
   fact: Fact
   isCorrect: boolean
-  responseTime: number  // time to answer in milliseconds
+  responseTime: number  // time to answer в милисекунди
+}
+
+export type TrainingStatus = 'in_progress' | 'completed';
+
+export interface Training {
+  id: string;
+  startedAt: string;
+  finishedAt?: string;
+  facts: FactResponse[];
+  score: number;
+  totalResponseTime: number;
+  status: TrainingStatus;
 }
 
 export interface Session {

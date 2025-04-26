@@ -1,10 +1,80 @@
 import type { Fact, Session } from './types';
+import type { Training, FactResponse, TrainingStatus } from './types';
 import { allFacts } from '../utils/facts';
 import { supabase } from './supabase';
 
 // Флаг, който показва дали се използва Supabase или не
 // Това позволява лесно превключване между режими и обработка на офлайн случаи
 let useSupabase = true;
+
+// ====== TRAININGS LOCAL STORAGE API ======
+
+const TRAININGS_KEY = 'trainings';
+const CURRENT_TRAINING_KEY = 'current_training';
+
+export function startTraining(): Training {
+  const training: Training = {
+    id: `training_${new Date().toISOString().replace(/[:.]/g, '_')}`,
+    startedAt: new Date().toISOString(),
+    facts: [],
+    score: 0,
+    totalResponseTime: 0,
+    status: 'in_progress',
+  };
+  localStorage.setItem(CURRENT_TRAINING_KEY, JSON.stringify(training));
+  return training;
+}
+
+export function getCurrentTraining(): Training | null {
+  const raw = localStorage.getItem(CURRENT_TRAINING_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Training;
+  } catch (e) {
+    console.error('getCurrentTraining: failed to parse', e);
+    return null;
+  }
+}
+
+export function addFactToCurrentTraining(factResponse: FactResponse): void {
+  const training = getCurrentTraining();
+  if (!training || training.status !== 'in_progress') return;
+  training.facts.push(factResponse);
+  training.score += factResponse.isCorrect ? 1 : 0;
+  training.totalResponseTime += factResponse.responseTime;
+  localStorage.setItem(CURRENT_TRAINING_KEY, JSON.stringify(training));
+}
+
+export function finishTraining(): void {
+  const training = getCurrentTraining();
+  if (!training || training.status !== 'in_progress') return;
+  training.status = 'completed';
+  training.finishedAt = new Date().toISOString();
+  // Записваме в масива trainings
+  const raw = localStorage.getItem(TRAININGS_KEY);
+  let trainings: Training[] = [];
+  if (raw) {
+    try {
+      trainings = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+    } catch (e) {
+      trainings = [];
+    }
+  }
+  trainings.push(training);
+  localStorage.setItem(TRAININGS_KEY, JSON.stringify(trainings));
+  localStorage.removeItem(CURRENT_TRAINING_KEY);
+}
+
+export function getTrainings(): Training[] {
+  const raw = localStorage.getItem(TRAININGS_KEY);
+  if (!raw) return [];
+  try {
+    return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+// ====== END TRAININGS API ======
 
 // Функция, която проверява дали Supabase е достъпен
 export async function checkSupabaseConnection(): Promise<boolean> {
