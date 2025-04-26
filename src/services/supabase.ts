@@ -266,6 +266,9 @@ export async function saveTrainingToSupabase(training: Training): Promise<boolea
       console.error('saveTrainingToSupabase: Няма автентикиран потребител');
       return false;
     }
+    
+    // Използваме стандартни ISO дати за запис в Supabase
+    // Форматирането в български формат ще се прави само при визуализация
     const { error } = await supabase.from('trainings').insert([
       {
         user_id: userId,
