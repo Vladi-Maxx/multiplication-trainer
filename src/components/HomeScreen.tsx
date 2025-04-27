@@ -14,8 +14,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onPlay, onAchievements, onAlbum
         {/* Обединен ляв+централен панел */}
         <div className="left-panel flex items-center justify-center">
           <div className="puzzle-placeholder aspect-[3/4] w-full max-w-[500px] max-h-[75vh] mx-auto bg-[#e6f3fa] rounded-2xl shadow-xl border border-[#e0eef5] flex items-center justify-center">
-            {/* <img src={...} alt="Home Art" className="object-contain w-full h-full rounded-xl" /> */}
-          </div>
+  <video
+    src="/Pics/Dragon's Math Puzzle.mp4"
+    autoPlay
+    loop
+    muted
+    playsInline
+    className="object-contain w-full h-full rounded-xl"
+  >
+    Вашият браузър не поддържа видео.
+  </video>
+</div>
         </div>
         {/* Десен панел с бутони */}
         <div className="right-panel flex flex-col items-center justify-center gap-6 w-full max-w-[320px] mx-auto">
