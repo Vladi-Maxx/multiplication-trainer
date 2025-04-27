@@ -6,7 +6,7 @@ export const allFacts = Array.from({ length: 10 }, (_, i) =>
 ).flat()
 
 // Адаптивно теглене на факт
-export function randomFact() {
+export function randomFact(prevFact?: { i: number, j: number }) {
   const stats: StatFact[] = loadFacts()
   const now = new Date()
   const dueFacts = stats.length
@@ -23,10 +23,15 @@ export function randomFact() {
     }
     return true
   })
-  if (activeFacts.length === 0) {
+  let filteredFacts = activeFacts;
+  if (prevFact && activeFacts.length > 1) {
+    filteredFacts = activeFacts.filter(f => !(f.i === prevFact.i && f.j === prevFact.j));
+    if (filteredFacts.length === 0) filteredFacts = activeFacts;
+  }
+  if (filteredFacts.length === 0) {
     return allFacts[Math.floor(Math.random() * allFacts.length)]
   }
-  const weighted = activeFacts.map(fact => {
+  const weighted = filteredFacts.map(fact => {
     const rec = stats.find(r => r.i === fact.i && r.j === fact.j)
     const attempts = rec?.attempts ?? 0
     const correct = rec?.correctCount ?? 0
@@ -46,6 +51,6 @@ export function randomFact() {
     }
     r -= wItem.weight
   }
-  // fallback към активните факти
-  return activeFacts[Math.floor(Math.random() * activeFacts.length)]
+  // fallback към филтрираните факти
+  return filteredFacts[Math.floor(Math.random() * filteredFacts.length)]
 }

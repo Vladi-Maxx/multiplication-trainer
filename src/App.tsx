@@ -22,6 +22,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [score, setScore] = useState(0)
   const [fact, setFact] = useState<Fact>(() => randomFact())
+  const prevFactRef = React.useRef<Fact | null>(null);
   const [isFinished, setFinished] = useState(false)
   const [paused, setPaused] = useState(false)
   const [lastCorrect, setLastCorrect] = useState(null)
@@ -101,7 +102,8 @@ export default function App() {
       setFinished(true);
       finishTraining();
     }
-    setFact(randomFact());
+    setFact(randomFact(prevFactRef.current));
+    prevFactRef.current = fact;
   }
 
   const restart = () => {
@@ -121,6 +123,7 @@ export default function App() {
           setScore(0);
           setPuzzleRevealedCount(0);
           setLastCorrect(null);
+          prevFactRef.current = null;
           setFact(randomFact());
           startTraining();
           setTimeout(() => {
@@ -144,7 +147,7 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="text-2xl">Времето изтече!</div>
         <div className="flex gap-4">
-          <button onClick={() => { setPaused(false); setFact(randomFact()) }} className="bg-blue-500 text-white px-4 py-2 rounded">
+          <button onClick={() => { setPaused(false); setFact(randomFact(prevFactRef.current)); prevFactRef.current = fact; }} className="bg-blue-500 text-white px-4 py-2 rounded">
             Продължи
           </button>
           <button onClick={() => { setPaused(false); setFinished(true); finishTraining(); }} className="bg-red-500 text-white px-4 py-2 rounded">
