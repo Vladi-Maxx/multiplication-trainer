@@ -66,10 +66,11 @@ export function finishTraining(): void {
 
   // Update fact statistics based on completed training
   let facts = loadFacts();
-  const daysMap: Record<number, number> = {1:0,2:1,3:2,4:4,5:7};
+  // По-гъвкава Leitner карта (интервали в дни)
+  // box 1: веднага, box 2: 0.2 дни (~5 часа), box 3: 1 ден, box 4: 2 дни, box 5: 4 дни
+  const daysMap: Record<number, number> = {1:0, 2:0.2, 3:1, 4:2, 5:4};
   training.facts.forEach(fr => {
     const { fact: f, isCorrect, responseTime } = fr;
-    // Prepare record
     const existing = facts.find(r => r.i === f.i && r.j === f.j);
     const record: Fact = existing
       ? { ...existing }
@@ -86,7 +87,7 @@ export function finishTraining(): void {
           nextPractice: new Date().toISOString(),
           difficultyRating: f.difficultyRating || 5.0
         };
-    // Update stats
+    // Обновяване на статистики
     record.attempts += 1;
     if (isCorrect) {
       record.correctCount += 1;
@@ -97,16 +98,29 @@ export function finishTraining(): void {
     }
     record.avgTime = ((record.avgTime * (record.attempts - 1)) + responseTime) / record.attempts;
     record.difficultyRating = Math.max(1, Math.min(10, record.difficultyRating + (isCorrect ? -0.2 : 0.5)));
-    if (isCorrect && record.streak >= 3) {
-      record.box = Math.min(record.box + 1, 5);
-      record.lastPracticed = new Date().toISOString();
-    } else if (!isCorrect) {
+
+    // Логика за box и nextPractice:
+    if (!isCorrect) {
+      // При грешка: box 1 и веднага за упражнение
       record.box = 1;
       record.lastPracticed = new Date().toISOString();
+      record.nextPractice = new Date().toISOString();
+    } else if (isCorrect && record.streak >= 3) {
+      // Ако streak >= 3 и верен: качваме box, интервал според box
+      record.box = Math.min(record.box + 1, 5);
+      record.lastPracticed = new Date().toISOString();
+      record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
+    } else if (isCorrect && record.streak < 3) {
+      // Ако streak < 3: не местим box, но даваме кратък интервал (0.1 дни)
+      record.lastPracticed = new Date().toISOString();
+      record.nextPractice = new Date(Date.now() + 0.1 * 86400000).toISOString();
     }
-    record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
     facts = [...facts.filter(r => !(r.i === f.i && r.j === f.j)), record];
   });
+  // Обяснение:
+  // - При грешка се връща box 1 и веднага се упражнява пак.
+  // - При 3 поредни верни се качва box и се увеличава интервалът, но не твърде много.
+  // - Ако streak < 3, дава се кратък интервал (около 2.4 часа), за да не се губи мотивация и да има повече "due" факти.
   // Persist updated facts and sync once
   saveFacts(facts);
   if (useSupabase) {
