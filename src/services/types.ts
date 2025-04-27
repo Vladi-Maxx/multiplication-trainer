@@ -9,6 +9,7 @@ export interface Fact {
   box: number  // Leitner box (1..5)
   lastPracticed: string  // ISO date of last practice
   nextPractice: string  // ISO date of next scheduled practice
+  difficultyRating: number  // rating from 1 to 10
 }
 
 export interface FactResponse {

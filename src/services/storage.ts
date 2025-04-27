@@ -64,6 +64,55 @@ export function finishTraining(): void {
   localStorage.setItem(TRAININGS_KEY, JSON.stringify(trainings));
   localStorage.removeItem(CURRENT_TRAINING_KEY);
 
+  // Update fact statistics based on completed training
+  let facts = loadFacts();
+  const daysMap: Record<number, number> = {1:0,2:1,3:2,4:4,5:7};
+  training.facts.forEach(fr => {
+    const { fact: f, isCorrect, responseTime } = fr;
+    // Prepare record
+    const existing = facts.find(r => r.i === f.i && r.j === f.j);
+    const record: Fact = existing
+      ? { ...existing }
+      : {
+          i: f.i,
+          j: f.j,
+          correctCount: 0,
+          wrongCount: 0,
+          streak: 0,
+          avgTime: 0,
+          attempts: 0,
+          box: 1,
+          lastPracticed: new Date().toISOString(),
+          nextPractice: new Date().toISOString(),
+          difficultyRating: f.difficultyRating || 5.0
+        };
+    // Update stats
+    record.attempts += 1;
+    if (isCorrect) {
+      record.correctCount += 1;
+      record.streak += 1;
+    } else {
+      record.wrongCount += 1;
+      record.streak = 0;
+    }
+    record.avgTime = ((record.avgTime * (record.attempts - 1)) + responseTime) / record.attempts;
+    record.difficultyRating = Math.max(1, Math.min(10, record.difficultyRating + (isCorrect ? -0.2 : 0.5)));
+    if (isCorrect && record.streak >= 3) {
+      record.box = Math.min(record.box + 1, 5);
+      record.lastPracticed = new Date().toISOString();
+    } else if (!isCorrect) {
+      record.box = 1;
+      record.lastPracticed = new Date().toISOString();
+    }
+    record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
+    facts = [...facts.filter(r => !(r.i === f.i && r.j === f.j)), record];
+  });
+  // Persist updated facts and sync once
+  saveFacts(facts);
+  if (useSupabase) {
+    syncFactsWithSupabase(facts).catch(e => console.error('finishTraining: Error syncing facts:', e));
+  }
+
   // Асинхронно записваме тренировката и в Supabase, ако е активен
   if (useSupabase) {
     import('./supabase').then(({ saveTrainingToSupabase }) => {
@@ -121,7 +170,8 @@ export function loadFacts(): Fact[] {
       attempts: 0,
       box: 1,
       lastPracticed: now,
-      nextPractice: now
+      nextPractice: now,
+      difficultyRating: 5.0
     }));
     localStorage.setItem('facts', JSON.stringify(defaultFacts));
     return defaultFacts;
@@ -134,12 +184,13 @@ export function loadFacts(): Fact[] {
     arr.forEach(r => {
       if (r.box == null) r.box = 1;
       if (r.lastPracticed == null) r.lastPracticed = now;
+      if (r.difficultyRating == null) r.difficultyRating = 5.0;
     });
     // default nextPractice based on Leitner intervals
     const intervalMap: Record<number, number> = {1:0,2:1,3:2,4:4,5:7};
     arr.forEach(r => {
       if (!r.nextPractice || isNaN(Date.parse(r.nextPractice))) {
-        const days = intervalMap[r.box] ?? 0;
+        const days = intervalMap[r.box as number] ?? 0;
         r.nextPractice = new Date(Date.now() + days * 86400000).toISOString();
       }
     });
@@ -207,7 +258,7 @@ async function syncFactsWithSupabase(facts: Fact[]): Promise<void> {
         correct_count: fact.correctCount,
         incorrect_count: fact.wrongCount,
         last_seen_at: fact.lastPracticed,
-        difficulty_rating: fact.avgTime ? fact.avgTime / 1000 : 5.0
+        difficulty_rating: fact.difficultyRating
       };
       const { data: ufData, error: ufError } = await supabase
         .from('user_facts')

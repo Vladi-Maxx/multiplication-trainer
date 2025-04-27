@@ -74,6 +74,10 @@ export default function App() {
       return;
     }
     // Добави отговора към текущата тренировка само ако timedOut е false
+    // Изчисляваме текущата трудност на факта
+    const allFactsLocal = loadFacts();
+    const existingFact = allFactsLocal.find(f2 => f2.i === fact.i && f2.j === fact.j);
+    const currentDifficulty = existingFact?.difficultyRating ?? 5.0;
     addFactToCurrentTraining({
       fact: {
         i: fact.i,
@@ -85,94 +89,20 @@ export default function App() {
         attempts: 0,
         box: 1,
         lastPracticed: new Date().toISOString(),
-        nextPractice: new Date().toISOString()
+        nextPractice: new Date().toISOString(),
+        difficultyRating: currentDifficulty
       },
       isCorrect: ok,
       responseTime: duration
     });
-    setPuzzleRevealedCount(prev => {
-      if (ok) return Math.min(prev + 2, 60);
-      else return Math.max(prev - 1, 0);
-    });
-    setScore(s => {
-      const next = s + (ok ? POINT_CORRECT : POINT_WRONG)
-      // update statistics for this fact
-      const prevFacts = loadFacts()
-      const existing = prevFacts.find(f => f.i === fact.i && f.j === fact.j)
-      const daysMap: Record<number, number> = {1: 0, 2: 1, 3: 2, 4: 4, 5: 7};
-
-      const record = existing
-        ? { ...existing } 
-        : { 
-            i: fact.i,
-            j: fact.j,
-            correctCount: 0,
-            wrongCount: 0,
-            streak: 0,
-            avgTime: 0,
-            attempts: 0,
-            box: 1,
-            lastPracticed: new Date().toISOString(),
-            nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString() 
-          };
-
-      // Update stats based on correctness
-      const now = new Date().toISOString();
-      // update metrics
-      record.attempts = (record.attempts ?? 0) + 1
-      if (ok) {
-        record.correctCount = (record.correctCount ?? 0) + 1
-        record.streak = (record.streak ?? 0) + 1
-      } else {
-        record.wrongCount = (record.wrongCount ?? 0) + 1
-        record.streak = 0
-      }
-      record.avgTime = ((record.avgTime ?? 0) * (record.attempts - 1) + duration) / record.attempts
-      // Leitner system: update box and lastPracticed
-      if (ok && record.streak >= 3) {
-        record.box = Math.min((record.box ?? 1) + 1, 5);
-        record.lastPracticed = now;
-      } else if (!ok) {
-        record.box = 1;
-        record.lastPracticed = now;
-      }
-      // update nextPractice based on interval
-      record.nextPractice = new Date(Date.now() + daysMap[record.box] * 86400000).toISOString();
-      // save updated stats
-      const updatedFacts = [...prevFacts.filter(f => !(f.i === fact.i && f.j === fact.j)), record] 
-      saveFacts(updatedFacts)
-      if (next >= TARGET_SCORE) {
-        setFinished(true)
-        finishTraining(); // При достигане на целта приключи тренировката
-      }
-      // Създаваме и записваме сесията в Supabase
-      logSession({
-        id: Date.now().toString(),
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        score: next,
-        durationSeconds: Math.floor(duration / 1000), // превръщаме милисекундите в секунди
-        timedOut,
-        facts: [{ // използваме новия FactResponse тип
-          fact: {
-            i: fact.i,
-            j: fact.j,
-            correctCount: 0,
-            wrongCount: 0,
-            streak: 0,
-            avgTime: 0,
-            attempts: 0,
-            box: 1,
-            lastPracticed: new Date().toISOString(),
-            nextPractice: new Date().toISOString()
-          },
-          isCorrect: ok,
-          responseTime: duration
-        }]
-      })
-      return next
-    })
-    setFact(randomFact())
+    setPuzzleRevealedCount(prev => ok ? Math.min(prev + 2, 60) : Math.max(prev - 1, 0));
+    const next = score + (ok ? POINT_CORRECT : POINT_WRONG);
+    setScore(next);
+    if (next >= TARGET_SCORE) {
+      setFinished(true);
+      finishTraining();
+    }
+    setFact(randomFact());
   }
 
   const restart = () => {
