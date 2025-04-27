@@ -102,7 +102,10 @@ export default function App() {
       setFinished(true);
       finishTraining();
     }
-    setFact(randomFact(prevFactRef.current));
+    console.log('prevFactRef.current:', prevFactRef.current);
+    const newFact = randomFact(prevFactRef.current);
+    console.log('newFact:', newFact);
+    setFact(newFact);
     prevFactRef.current = fact;
   }
 
@@ -161,15 +164,7 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      {/* Родителски контролен бутон */}
-      <button 
-        onClick={() => setShowDashboard(true)}
-        className="absolute top-4 right-4 z-50 px-3 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 focus:outline-none flex items-center justify-center shadow-lg"
-        title="Родителски дашборд"
-      >
-        <span className="text-xl">📊</span>
-      </button>
-      
+
       {/* progress bar */}
       <div className="progress-container" ref={progressRef} style={{position:'relative'}}>
         <div
