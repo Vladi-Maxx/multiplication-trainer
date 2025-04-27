@@ -121,8 +121,7 @@ export function loadFacts(): Fact[] {
       attempts: 0,
       box: 1,
       lastPracticed: now,
-      nextPractice: now,
-      difficultyRating: 5.0 // Стойност по подразбиране за нови факти
+      nextPractice: now
     }));
     localStorage.setItem('facts', JSON.stringify(defaultFacts));
     return defaultFacts;
@@ -135,7 +134,6 @@ export function loadFacts(): Fact[] {
     arr.forEach(r => {
       if (r.box == null) r.box = 1;
       if (r.lastPracticed == null) r.lastPracticed = now;
-      if (r.difficultyRating == null) r.difficultyRating = 5.0; // Добавяме стойност за трудност, ако липсва
     });
     // default nextPractice based on Leitner intervals
     const intervalMap: Record<number, number> = {1:0,2:1,3:2,4:4,5:7};
@@ -209,7 +207,7 @@ async function syncFactsWithSupabase(facts: Fact[]): Promise<void> {
         correct_count: fact.correctCount,
         incorrect_count: fact.wrongCount,
         last_seen_at: fact.lastPracticed,
-        difficulty_rating: fact.difficultyRating || 5.0 // Използваме стойността от difficultyRating вместо avgTime
+        difficulty_rating: fact.avgTime ? fact.avgTime / 1000 : 5.0
       };
       const { data: ufData, error: ufError } = await supabase
         .from('user_facts')
@@ -343,8 +341,12 @@ export async function loadFactsFromSupabase(): Promise<Fact[] | null> {
         id,
         correct_count,
         incorrect_count,
-        last_seen_at,
-        difficulty_rating,
+        streak,
+        avg_time,
+        attempts,
+        box,
+        last_practiced,
+        next_practice,
         facts!inner (*)
       `)
       .eq('user_id', userId);
@@ -358,15 +360,14 @@ export async function loadFactsFromSupabase(): Promise<Fact[] | null> {
     const facts: Fact[] = userFacts.map(uf => ({
       i: uf.facts.multiplicand,
       j: uf.facts.multiplier,
-      correctCount: uf.correct_count || 0,
-      wrongCount: uf.incorrect_count || 0,
-      streak: 0, // Полето не съществува в Supabase, задаваме стойност по подразбиране
-      avgTime: 0, // Полето не съществува в Supabase
-      attempts: uf.correct_count + uf.incorrect_count || 0, // Изчисляваме от наличните полета
-      box: 1, // Полето не съществува в Supabase
-      lastPracticed: uf.last_seen_at || new Date().toISOString(), // Използваме last_seen_at вместо last_practiced
-      nextPractice: new Date().toISOString(), // Полето не съществува в Supabase
-      difficultyRating: uf.difficulty_rating || 5.0 // Използваме стойността от Supabase или 5.0 по подразбиране
+      correctCount: uf.correct_count,
+      wrongCount: uf.incorrect_count,
+      streak: uf.streak,
+      avgTime: uf.avg_time,
+      attempts: uf.attempts,
+      box: uf.box,
+      lastPracticed: uf.last_practiced,
+      nextPractice: uf.next_practice
     }));
     
     
