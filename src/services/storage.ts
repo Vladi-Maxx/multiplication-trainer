@@ -278,97 +278,6 @@ async function syncFactsWithSupabase(facts: Fact[]): Promise<void> {
   }
 }
 
-// Ограничаваме до последните 10 сесии, за да не препълним localStorage
-// Така няма да превишаваме квотата
-const MAX_SESSIONS = 10;
-
-export function logSession(session: Session): void {
-  try {
-    const raw = localStorage.getItem('sessions');
-    let sessions: Session[] = [];
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        sessions = Array.isArray(parsed) ? (parsed as Session[]) : [];
-      } catch (e) {
-        console.error('logSession: failed to parse sessions', e);
-        sessions = [];
-      }
-    }
-    
-    // Добавяме новата сесия
-    sessions.push(session);
-    
-    // Ако имаме повече от MAX_SESSIONS, премахваме най-старите
-    if (sessions.length > MAX_SESSIONS) {
-      sessions = sessions.slice(-MAX_SESSIONS);
-    }
-    
-    localStorage.setItem('sessions', JSON.stringify(sessions));
-  } catch (e) {
-    console.error('logSession: failed to save sessions', e);
-    
-    // Ако имаме ограничение на квотата, опитваме да изчистим всички сесии
-    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-      try {
-        localStorage.removeItem('sessions');
-        console.log('Sessions cleared due to quota limit');
-      } catch (clearError) {
-        console.error('Failed to clear sessions:', clearError);
-      }
-    }
-  }
-}
-
-// Функция за изчистване на всички данни в localStorage
-// Може да се използва чрез конзола или бутон в UI, ако се добави такъв
-export function clearAllStorageData(): void {
-  try {
-    localStorage.clear();
-    console.log('All local storage data has been cleared');
-  } catch (e) {
-    console.error('Failed to clear local storage:', e);
-  }
-}
-
-/**
- * Инициализира Supabase база данни със всички факти за таблицата за умножение
- * Тази функция се извиква еднократно, за да се инициализират факти при първо стартиране
- */
-export async function initializeSupabaseFactsData(): Promise<void> {
-  if (!useSupabase) return;
-  
-  try {
-    // Проверяваме дали имаме някакви факти в базата данни
-    const { count, error } = await supabase
-      .from('facts')
-      .select('*', { count: 'exact', head: true });
-    
-    // Ако вече имаме факти, пропускаме инициализацията
-    if (!error && count && count > 0) {
-      
-      return;
-    }
-    
-    
-    
-    // Ако нямаме, добавяме всички факти от 1x1 до 9x9
-    for (const fact of allFacts) {
-      await supabase
-        .from('facts')
-        .insert({
-          multiplicand: fact.i,
-          multiplier: fact.j
-        });
-    }
-    
-    
-  } catch (e) {
-    console.error('Error initializing Supabase facts database:', e);
-    useSupabase = false; // Изключваме Supabase при грешка
-  }
-}
-
 /**
  * Зарежда локалните факти от Supabase, ако localStorage е празен
  * Използва се за първоначално зареждане или при смяна на устройство
@@ -427,5 +336,56 @@ export async function loadFactsFromSupabase(): Promise<Fact[] | null> {
     console.error('Error loading facts from Supabase:', e);
     useSupabase = false; // Изключваме Supabase при грешка
     return null;
+  }
+}
+
+/**
+ * Инициализира Supabase база данни със всички факти за таблицата за умножение
+ * Тази функция се извиква еднократно, за да се инициализират факти при първо стартиране
+ */
+export async function initializeSupabaseFactsData(): Promise<void> {
+  if (!useSupabase) return;
+  
+  try {
+    // Проверяваме дали имаме някакви факти в базата данни
+    const { count, error } = await supabase
+      .from('facts')
+      .select('*', { count: 'exact', head: true });
+    
+    // Ако вече имаме факти, пропускаме инициализацията
+    if (!error && count && count > 0) {
+      
+      return;
+    }
+    
+    
+    
+    // Ако нямаме, добавяме всички факти от 1x1 до 9x9
+    for (const fact of allFacts) {
+      await supabase
+        .from('facts')
+        .insert({
+          multiplicand: fact.i,
+          multiplier: fact.j
+        });
+    }
+    
+    
+  } catch (e) {
+    console.error('Error initializing Supabase facts database:', e);
+    useSupabase = false; // Изключваме Supabase при грешка
+  }
+}
+
+/**
+ * Функция за изчистване на всички данни в localStorage
+ * Може да се използва чрез конзола или бутон в UI, ако се добави такъв
+ */
+export function clearAllStorageData(): void {
+  try {
+    localStorage.clear();
+    console.log('All local storage data has been cleared');
+  } catch (e) {
+    console.error('Failed to clear local storage:', e);
   }
 }

@@ -3,7 +3,7 @@ import FlashCard, { Fact } from './components/FlashCard.tsx'
 import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
-import { loadFacts, saveFacts, logSession, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
+import { loadFacts, saveFacts, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
 import { initializeSession } from './services/supabase'
 import dragonPic from '../Pics/Dragon 1.png'
 
