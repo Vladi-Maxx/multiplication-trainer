@@ -21,9 +21,14 @@ export default function Summary({ score, onRestart }: Props) {
     <div className="min-h-screen flex flex-col items-center justify-center gap-6">
       <h1 className="text-4xl font-bold">Браво! 🎉</h1>
       <p className="text-xl">Събра {score} точки</p>
-      <button onClick={onRestart} className="bg-purple-600 text-white px-6 py-3 rounded">
-        Играй пак
-      </button>
+      <div className="flex justify-center mt-8 gap-4">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded text-lg shadow"
+          onClick={onRestart}
+        >
+          Начало
+        </button>
+      </div>
       <div className="stats-row grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 max-w-3xl w-full mx-auto">
         <div className="stat-item bg-purple-50 p-3 rounded-md shadow-sm flex flex-col items-center min-w-0">
           <div className="text-sm text-purple-700">Общо задачи</div>

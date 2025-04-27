@@ -13,15 +13,19 @@ const POINT_WRONG = -5
 
 import PuzzleSVG from './components/PuzzleSVG';
 import Dashboard from './components/Dashboard';
+import HomeScreen from './components/HomeScreen';
+import Album from './components/Album';
+
+type Screen = 'home' | 'game' | 'dashboard' | 'album';
 
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('home');
   const [score, setScore] = useState(0)
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const [isFinished, setFinished] = useState(false)
   const [paused, setPaused] = useState(false)
   const [lastCorrect, setLastCorrect] = useState(null)
   const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
-  const [showDashboard, setShowDashboard] = useState(false);
   const progressRef = React.useRef<HTMLDivElement>(null);
   const [progressWidth, setProgressWidth] = React.useState(0);
   React.useEffect(() => {
@@ -45,12 +49,9 @@ export default function App() {
         if (!isAuthenticated) {
           console.warn('Не може да се инициализира потребителска сесия, продължаваме в офлайн режим');
         }
-        
         // Проверяваме дали можем да се свържем със Supabase
         const isConnected = await checkSupabaseConnection();
-        
         if (isConnected) {
-          
           // Инициализираме фактите в базата (ако вече съществуват, няма да се променят)
           await initializeSupabaseFactsData();
         } else {
@@ -59,11 +60,9 @@ export default function App() {
       } catch (error) {
         console.error('Грешка при инициализиране на приложението:', error);
       }
-      
       // Зареждаме фактите от localStorage както преди
       loadFacts();
     };
-    
     initializeApp();
   }, [])
 
@@ -109,11 +108,35 @@ export default function App() {
     setScore(0)
     setFact(randomFact())
     setFinished(false)
+    setScreen('home'); // При рестарт се връщаме на началния екран
     startTraining(); // При рестарт започни нова тренировка
   }
 
-  if (showDashboard) {
-    return <Dashboard onClose={() => setShowDashboard(false)} />
+  if (screen === 'home') {
+    return (
+      <HomeScreen
+        onPlay={() => {
+          setScreen('game');
+          setFinished(false);
+          setScore(0);
+          setPuzzleRevealedCount(0);
+          setLastCorrect(null);
+          setFact(randomFact());
+          startTraining();
+          setTimeout(() => {
+            if (progressRef.current) setProgressWidth(progressRef.current.offsetWidth);
+          }, 0);
+        }}
+        onAchievements={() => setScreen('dashboard')}
+        onAlbum={() => setScreen('album')}
+      />
+    );
+  }
+  if (screen === 'dashboard') {
+    return <Dashboard onClose={() => setScreen('home')} />
+  }
+  if (screen === 'album') {
+    return <Album onClose={() => setScreen('home')} />
   }
   
   if (paused) {
