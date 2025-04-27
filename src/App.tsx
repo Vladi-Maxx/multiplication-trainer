@@ -14,6 +14,7 @@ const POINT_WRONG = -5
 import PuzzleSVG from './components/PuzzleSVG';
 import Dashboard from './components/Dashboard';
 import HomeScreen from './components/HomeScreen';
+import AlbumScreen from './components/AlbumScreen';
 import Album from './components/Album';
 
 type Screen = 'home' | 'game' | 'dashboard' | 'album';
@@ -142,7 +143,7 @@ export default function App() {
     return <Dashboard onClose={() => setScreen('home')} />
   }
   if (screen === 'album') {
-    return <Album onClose={() => setScreen('home')} />
+    return <AlbumScreen onBack={() => setScreen('home')} />
   }
   
   if (paused) {
