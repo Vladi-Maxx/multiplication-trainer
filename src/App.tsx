@@ -3,8 +3,9 @@ import FlashCard, { Fact } from './components/FlashCard.tsx'
 import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
-import { loadFacts, saveFacts, logSession, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
-import { initializeSession } from './services/supabase'
+import { loadFacts, saveFacts, startTraining, finishTraining, addFactToCurrentTraining, logSession, getCurrentTraining } from './services/storage';
+import { supabase, recordFactResponse, initializeSession } from './services/supabase';
+import { clearAllLocalStorage } from './utils/debug'; // Импортираме функцията за изчистване на данните
 import dragonPic from '../Pics/Dragon 1.png'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
@@ -40,27 +41,18 @@ export default function App() {
     const initializeApp = async () => {
       startTraining(); // стартираме тренировка при първоначално зареждане
       try {
-        // Първо инициализираме сесията - влизаме с фиксирания потребител
+        // Инициализираме потребителска сесия, ако възможно
         const isAuthenticated = await initializeSession();
+        
         if (!isAuthenticated) {
           console.warn('Не може да се инициализира потребителска сесия, продължаваме в офлайн режим');
         }
-        
-        // Проверяваме дали можем да се свържем със Supabase
-        const isConnected = await checkSupabaseConnection();
-        
-        if (isConnected) {
-          
-          // Инициализираме фактите в базата (ако вече съществуват, няма да се променят)
-          await initializeSupabaseFactsData();
-        } else {
-          console.log('Няма връзка със Supabase, работим само с localStorage');
-        }
       } catch (error) {
-        console.error('Грешка при инициализиране на приложението:', error);
+        console.error('Грешка при инициализиране на потребителска сесия:', error);
       }
       
-      // Зареждаме фактите от localStorage както преди
+      // Зареждаме фактите от localStorage и Supabase
+      // Тази функция ще се погрижи за проверка на връзката и инициализация
       loadFacts();
     };
     
@@ -73,19 +65,28 @@ export default function App() {
       setPaused(true);
       return;
     }
+    
+    // Не използваме recordFactResponse за запис на сесии, тъй като не се интересуваме от тях
+    // Трудността ще се обнови локално и ще се синхронизира със Supabase при следващата синхронизация
+    // Зареждаме фактите, за да вземем актуалната трудност
+    const allFacts = loadFacts();
+    const existingFact = allFacts.find(f => f.i === fact.i && f.j === fact.j);
+    const currentDifficulty = existingFact?.difficultyRating || 5.0;
+  
     // Добави отговора към текущата тренировка само ако timedOut е false
     addFactToCurrentTraining({
       fact: {
         i: fact.i,
         j: fact.j,
-        correctCount: 0,
-        wrongCount: 0,
-        streak: 0,
-        avgTime: 0,
-        attempts: 0,
-        box: 1,
-        lastPracticed: new Date().toISOString(),
-        nextPractice: new Date().toISOString()
+        correctCount: existingFact?.correctCount || 0,
+        wrongCount: existingFact?.wrongCount || 0,
+        streak: existingFact?.streak || 0,
+        avgTime: existingFact?.avgTime || 0,
+        attempts: existingFact?.attempts || 0,
+        box: existingFact?.box || 1,
+        lastPracticed: existingFact?.lastPracticed || new Date().toISOString(),
+        nextPractice: existingFact?.nextPractice || new Date().toISOString(),
+        difficultyRating: currentDifficulty // Използваме актуалната трудност на факта
       },
       isCorrect: ok,
       responseTime: duration
@@ -113,7 +114,8 @@ export default function App() {
             attempts: 0,
             box: 1,
             lastPracticed: new Date().toISOString(),
-            nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString() 
+            nextPractice: new Date(Date.now() + daysMap[1] * 86400000).toISOString(),
+            difficultyRating: 5.0  // Добавяме стойност по подразбиране
           };
 
       // Update stats based on correctness
@@ -128,6 +130,9 @@ export default function App() {
         record.streak = 0
       }
       record.avgTime = ((record.avgTime ?? 0) * (record.attempts - 1) + duration) / record.attempts
+      
+      // Актуализираме трудността на факта в локалния storage по същия начин както в Supabase
+      record.difficultyRating = Math.max(1, Math.min(10, (record.difficultyRating || 5.0) + (ok ? -0.2 : 0.5)))
       // Leitner system: update box and lastPracticed
       if (ok && record.streak >= 3) {
         record.box = Math.min((record.box ?? 1) + 1, 5);
@@ -157,14 +162,15 @@ export default function App() {
           fact: {
             i: fact.i,
             j: fact.j,
-            correctCount: 0,
-            wrongCount: 0,
-            streak: 0,
-            avgTime: 0,
-            attempts: 0,
-            box: 1,
-            lastPracticed: new Date().toISOString(),
-            nextPractice: new Date().toISOString()
+            correctCount: record.correctCount, // Използваме актуалните стойности от факта
+            wrongCount: record.wrongCount,
+            streak: record.streak,
+            avgTime: record.avgTime,
+            attempts: record.attempts,
+            box: record.box,
+            lastPracticed: record.lastPracticed,
+            nextPractice: record.nextPractice,
+            difficultyRating: record.difficultyRating // Използваме актуалната трудност
           },
           isCorrect: ok,
           responseTime: duration
@@ -179,13 +185,14 @@ export default function App() {
     setScore(0)
     setFact(randomFact())
     setFinished(false)
+    setPaused(false);
     startTraining(); // При рестарт започни нова тренировка
   }
 
   if (showDashboard) {
     return <Dashboard onClose={() => setShowDashboard(false)} />
   }
-  
+
   if (paused) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
@@ -213,7 +220,6 @@ export default function App() {
       >
         <span className="text-xl">📊</span>
       </button>
-      
       {/* progress bar */}
       <div className="progress-container" ref={progressRef} style={{position:'relative'}}>
         <div
