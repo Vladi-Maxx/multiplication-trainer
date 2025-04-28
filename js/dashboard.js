@@ -1,5 +1,6 @@
 // Инициализиране на връзка със Supabase
-const SUPABASE_URL = '***REMOVED***';
+// Всички чувствителни данни са преместени в .env файла
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 let supabaseClient = null;
 let userData = null;
 
@@ -9,8 +10,8 @@ async function initDashboard() {
     const loginButton = document.getElementById('loginButton');
     
     try {
-        // Хардкодваме анонимния ключ за тестове
-        const anonKey = '***REMOVED***';
+        // Взимаме анонимния ключ от .env файла
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         
         // Създаваме връзка със Supabase
         supabaseClient = supabase.createClient(SUPABASE_URL, anonKey);
@@ -19,8 +20,8 @@ async function initDashboard() {
         connectionStatus.textContent = 'Влизаме в системата...';
         
         const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email: '***REMOVED***',
-            password: '***REMOVED***',
+            email: import.meta.env.VITE_SUPABASE_USER_EMAIL,
+            password: import.meta.env.VITE_SUPABASE_USER_PASSWORD,
         });
         
         if (error) {
@@ -47,11 +48,11 @@ async function initDashboard() {
 // Функция за влизане
 async function handleLogin() {
     // Тук ще имплементираме влизане с имейл и парола
-    // За момента ще ползваме фиксираните данни
+    // Използваме данните от .env файла
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email: '***REMOVED***',
-            password: '***REMOVED***',
+            email: import.meta.env.VITE_SUPABASE_USER_EMAIL,
+            password: import.meta.env.VITE_SUPABASE_USER_PASSWORD,
         });
         
         if (error) throw error;

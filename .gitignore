@@ -1,5 +1,10 @@
-node_modules/
-dist/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# инструменти и големи файлове
+bfg.jar
 .env
 *.local
 .DS_Store

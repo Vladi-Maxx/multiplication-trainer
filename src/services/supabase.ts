@@ -14,8 +14,16 @@ interface ImportMeta {
 }
 
 // Вземаме настройките от средата - така поддържаме различни среди (dev, test, prod)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '***REMOVED***';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+// Ако променливите липсват, ще има грешка - това е по-добре от хардкодване на чувствителни данни
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+if (!supabaseUrl) {
+  console.error('Липсва VITE_SUPABASE_URL в .env файла!');
+}
+
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+if (!supabaseAnonKey) {
+  console.error('Липсва VITE_SUPABASE_ANON_KEY в .env файла!');
+}
 
 // Създаваме Supabase клиент
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
