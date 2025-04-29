@@ -108,13 +108,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     const statsMap: Record<string, { id: string, multiplicand: number, multiplier: number, correctCount: number, incorrectCount: number, attempts: number, difficultyRating: number, lastSeen: string | null }> = {};
     const sorted = [...trainingsData].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
     
-    console.log("Данни за тренировка:", sorted[0]?.facts?.[0]);
+    
     
     for (const tr of sorted) {
       if (!tr.facts || !Array.isArray(tr.facts)) continue;
       for (const fr of tr.facts) {
         // Проверяваме различни варианти на достъп до данните
-        console.log("Структура на факт в тренировка:", fr);
         
         let multiplicand = 0, multiplier = 0;
         
@@ -128,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
         }
         
         if (multiplicand === 0 || multiplier === 0) {
-          console.error("Не успяхме да намерим множителите в структурата:", fr);
+          
           continue;
         }
         
@@ -171,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
       }
     }));
     
-    console.log("Изчислени статистики за факти:", result);
+    
     return result;
   };
 
@@ -253,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
         
         // Статистики на фактите от trainings
         const calculatedUserFacts = calculateFactsStats(processedData);
-        console.log("Изчислени факти от тренировки:", calculatedUserFacts);
+        
         setUserFacts(calculatedUserFacts);
         const mastered = calculatedUserFacts.filter(f => f.difficulty_rating < 3).length;
         const inProgress = calculatedUserFacts.filter(f => f.difficulty_rating >= 3 && f.difficulty_rating <= 6).length;
@@ -738,9 +737,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                           const accuracy = attempts > 0 ? correct / attempts : 0;
                           let backgroundColor = '#f0f0f0', textColor = 'rgba(0, 0, 0, 0.7)', tooltipText = `${row}×${col}=${row*col}\nНеопитан факт`, accuracyText = '';
                           if (attempts > 0) {
-                            if (accuracy >= 0.8) backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                            else if (accuracy >= 0.5) backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                            else { backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`; textColor = 'rgba(255, 255, 255, 0.87)'; }
+                            // Използваме по-градиентен подход за цветовете на клетките
+                            if (accuracy >= 0.8) {
+                              // От светло до тъмно зелено за успеваемост 80-100%
+                              const greenIntensity = 0.3 + (accuracy - 0.8) * 3.5; // стойност от 0.3 до 1.0
+                              backgroundColor = `rgba(0, 200, 83, ${Math.min(greenIntensity, 1)})`;
+                            } else if (accuracy >= 0.5) {
+                              // От светло до тъмно жълто за успеваемост 50-80%
+                              const yellowIntensity = 0.3 + (accuracy - 0.5) * 2.33; // стойност от 0.3 до 1.0
+                              backgroundColor = `rgba(255, 193, 7, ${Math.min(yellowIntensity, 1)})`;
+                            } else { 
+                              // От светло до тъмно червено за успеваемост 0-50%
+                              const redIntensity = 0.3 + (0.5 - accuracy) * 1.4; // стойност от 0.3 до 1.0
+                              backgroundColor = `rgba(244, 67, 54, ${Math.min(redIntensity, 1)})`;
+                              textColor = 'rgba(255, 255, 255, 0.87)';
+                            }
                             tooltipText = `${row}×${col}=${row*col}\nОпити: ${attempts}, Правилни: ${correct}\nТочност: ${Math.round(accuracy * 100)}%`;
                             accuracyText = `${Math.round(accuracy * 100)}%`;
                           }
