@@ -74,6 +74,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
   const accuracyChartInstance = useRef<Chart | null>(null);
 
   useEffect(() => {
+    console.log('Компонентът е монтиран, проверяваме референциите:', {
+      trainingsChartRef: !!trainingsChartRef.current,
+      accuracyChartRef: !!accuracyChartRef.current
+    });
+    
     fetchTrainingData();
     fetchFactsData();
     
@@ -87,6 +92,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
       }
     };
   }, []);
+  
+  // Допълнителен useEffect за проверка на референциите и рендериране на графиките
+  useEffect(() => {
+    if (trainings.length > 0 && trainingsChartRef.current && accuracyChartRef.current) {
+      console.log('Референциите и данните са налични, рендерираме графиките');
+      // Изчакваме малко, за да сме сигурни, че DOM е готов
+      setTimeout(() => {
+        renderCharts(trainings);
+      }, 100);
+    }
+  }, [trainings, trainingsChartRef.current, accuracyChartRef.current]);
   
   // Извличане на данни за фактите за топлинната карта
   const fetchFactsData = async () => {
@@ -145,30 +161,80 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
 
   const fetchTrainingData = async () => {
     try {
+      console.log('Започваме извличане на данни за тренировките');
       setLoading(true);
+      
+      // Проверяваме дали Supabase е инициализиран правилно
+      console.log('Статус на Supabase клиент:', !!supabase);
+      
+      // Проверяваме дали можем да направим проста заявка към Supabase
+      try {
+        const { data: testData, error: testError } = await supabase.from('facts').select('count');
+        console.log('Тестова заявка към Supabase:', {
+          успешна: !testError,
+          грешка: testError ? testError.message : 'няма'
+        });
+      } catch (e) {
+        console.error('Грешка при тестова заявка към Supabase:', e);
+      }
+      
       const userId = await getCurrentUserId();
+      console.log('Получен потребителски ID:', userId);
       
       if (!userId) {
+        console.error('Няма потребителски ID');
         setError('Потребителят не е влязъл в системата');
         setLoading(false);
         return;
       }
 
       // Извличаме тренировките за текущия потребител
-      const { data, error } = await supabase
-        .from('trainings')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      console.log('Извличаме тренировки за потребител:', userId);
+      
+      try {
+        const { data, error } = await supabase
+          .from('trainings')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        console.log('Резултат от заявката:', { 
+          данни: !!data, 
+          брой: data?.length, 
+          грешка: error 
+        });
 
-      if (error) {
-        throw error;
+        if (error) {
+          console.error('Грешка при извличане на тренировки:', error);
+          throw error;
+        }
+        
+        // Преобразуваме facts от JSON в масив, ако е необходимо
+        const processedData = (data || []).map(training => {
+          if (training.facts && typeof training.facts === 'string') {
+            try {
+              return {
+                ...training,
+                facts: JSON.parse(training.facts)
+              };
+            } catch (e) {
+              console.error('Грешка при парсване на facts:', e);
+              return training;
+            }
+          }
+          return training;
+        });
+        
+        setTrainings(processedData);
+        calculateStats(processedData);
+        renderCharts(processedData);
+        setLoading(false);
+      } catch (dbError) {
+        console.error('Грешка при изпълнение на заявката:', dbError);
+        setError('Възникна грешка при зареждане на данните');
+        setLoading(false);
+        return;
       }
-
-      setTrainings(data || []);
-      calculateStats(data || []);
-      renderCharts(data || []);
-      setLoading(false);
     } catch (err) {
       console.error('Грешка при зареждане на данни за тренировките:', err);
       setError('Възникна грешка при зареждане на данните');
@@ -178,9 +244,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
 
   // Подготвяне на данни и рендериране на графики
   const renderCharts = (data: Training[]) => {
+    console.log('Започваме рендериране на графики', {
+      имаДанни: !!data,
+      бройДанни: data?.length,
+      имаTrainingsChart: !!trainingsChartRef.current,
+      имаAccuracyChart: !!accuracyChartRef.current
+    });
+    
     if (!data || data.length === 0 || !trainingsChartRef.current || !accuracyChartRef.current) {
+      console.log('Няма данни или референции за графиките');
       return;
     }
+    
+    console.log('Данни за графики:', data);
     
     // Групираме тренировките по дни
     const trainingsByDay = data.reduce((acc, training) => {
@@ -201,10 +277,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
       acc[date].count++;
       
       // Смятаме правилните отговори и общия брой задачи за този ден
-      if (training.facts && Array.isArray(training.facts)) {
-        const correctCount = training.facts.filter(fact => fact.isCorrect).length;
-        acc[date].totalCorrect += correctCount;
-        acc[date].totalProblems += training.facts.length;
+      if (training.facts) {
+        try {
+          // Проверяваме дали facts е масив или JSON стринг
+          const factsArray = Array.isArray(training.facts) 
+            ? training.facts 
+            : (typeof training.facts === 'string' 
+                ? JSON.parse(training.facts) 
+                : training.facts);
+          
+          if (Array.isArray(factsArray)) {
+            const correctCount = factsArray.filter(fact => fact.isCorrect).length;
+            acc[date].totalCorrect += correctCount;
+            acc[date].totalProblems += factsArray.length;
+          }
+        } catch (e) {
+          console.error('Грешка при обработка на facts:', e);
+        }
       }
       
       return acc;

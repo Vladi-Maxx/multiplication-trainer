@@ -14,15 +14,23 @@ interface ImportMeta {
 }
 
 // Вземаме настройките от средата - така поддържаме различни среди (dev, test, prod)
-// Ако променливите липсват, ще има грешка - това е по-добре от хардкодване на чувствителни данни
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Добавяме fallback стойности, но показваме предупреждения за липсващи променливи
+
+// Фиксирани стойности за локална разработка
+const FALLBACK_URL = 'https://sbbrgyohnwoyrseqcitl.supabase.co';
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiYnJneW9obndveXJzZXFjaXRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MDMxNDMsImV4cCI6MjA2MDk3OTE0M30.7LrNtmIRjDxJ2U9twGw4Xwt-xtDdcpc4h1JxrAiJQF4';
+
+// Опитваме да вземем стойностите от .env
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 if (!supabaseUrl) {
-  console.error('Липсва VITE_SUPABASE_URL в .env файла!');
+  console.error('Липсва VITE_SUPABASE_URL в .env файла! Използваме fallback стойност.');
+  supabaseUrl = FALLBACK_URL;
 }
 
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 if (!supabaseAnonKey) {
-  console.error('Липсва VITE_SUPABASE_ANON_KEY в .env файла!');
+  console.error('Липсва VITE_SUPABASE_ANON_KEY в .env файла! Използваме fallback стойност.');
+  supabaseAnonKey = FALLBACK_KEY;
 }
 
 // Създаваме Supabase клиент
