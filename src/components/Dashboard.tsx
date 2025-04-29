@@ -49,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [userFacts, setUserFacts] = useState<UserFact[]>([]);
   const [allFacts, setAllFacts] = useState<Fact[]>([]);
-  const [tooltipInfo, setTooltipInfo] = useState<{visible: boolean, x: number, y: number, content: React.ReactNode}>({ 
+  const [tooltipInfo, setTooltipInfo] = useState<{ visible: boolean, x: number, y: number, content: React.ReactNode }>({ 
     visible: false, 
     x: 0, 
     y: 0, 
@@ -80,7 +80,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     });
     
     fetchTrainingData();
-    fetchFactsData();
     
     // Почистваме графиките при размонтиране
     return () => {
@@ -104,59 +103,76 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     }
   }, [trainings, trainingsChartRef.current, accuracyChartRef.current]);
   
-  // Извличане на данни за фактите за топлинната карта
-  const fetchFactsData = async () => {
-    try {
-      const userId = await getCurrentUserId();
-      
-      if (!userId) {
-        return;
-      }
-      
-      // Извличаме фактите на потребителя
-      const { data: userFactsData, error: userFactsError } = await supabase
-        .from('user_facts')
-        .select('*, facts(*)')
-        .eq('user_id', userId);
+  // Нов метод: изчисляваме статистики на фактите от trainings
+  const calculateFactsStats = (trainingsData: Training[]) => {
+    const statsMap: Record<string, { id: string, multiplicand: number, multiplier: number, correctCount: number, incorrectCount: number, attempts: number, difficultyRating: number, lastSeen: string | null }> = {};
+    const sorted = [...trainingsData].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
+    
+    console.log("Данни за тренировка:", sorted[0]?.facts?.[0]);
+    
+    for (const tr of sorted) {
+      if (!tr.facts || !Array.isArray(tr.facts)) continue;
+      for (const fr of tr.facts) {
+        // Проверяваме различни варианти на достъп до данните
+        console.log("Структура на факт в тренировка:", fr);
         
-      if (userFactsError) {
-        console.error('Грешка при извличане на факти на потребителя:', userFactsError);
-        return;
-      }
-      
-      // Извличаме всички факти от таблицата за умножение
-      const { data: allFactsData, error: allFactsError } = await supabase
-        .from('facts')
-        .select('*')
-        .lte('multiplicand', 10)
-        .lte('multiplier', 10);
+        let multiplicand = 0, multiplier = 0;
         
-      if (allFactsError) {
-        console.error('Грешка при извличане на всички факти:', allFactsError);
-        return;
+        // Проверяваме за различни възможни структури на данните
+        if (fr.fact?.multiplicand !== undefined && fr.fact?.multiplier !== undefined) {
+          multiplicand = fr.fact.multiplicand;
+          multiplier = fr.fact.multiplier;
+        } else if (fr.fact?.i !== undefined && fr.fact?.j !== undefined) {
+          multiplicand = fr.fact.i;
+          multiplier = fr.fact.j;
+        }
+        
+        if (multiplicand === 0 || multiplier === 0) {
+          console.error("Не успяхме да намерим множителите в структурата:", fr);
+          continue;
+        }
+        
+        const key = `${multiplicand}x${multiplier}`;
+        if (!statsMap[key]) statsMap[key] = { 
+          id: fr.fact?.id || "", 
+          multiplicand: multiplicand, 
+          multiplier: multiplier, 
+          correctCount: 0, 
+          incorrectCount: 0, 
+          attempts: 0, 
+          difficultyRating: 5, 
+          lastSeen: null 
+        };
+        
+        const s = statsMap[key];
+        s.attempts++;
+        if (fr.isCorrect) { 
+          s.correctCount++; 
+          s.difficultyRating = Math.max(1, s.difficultyRating - 0.2); 
+        } else { 
+          s.incorrectCount++; 
+          s.difficultyRating = Math.min(10, s.difficultyRating + 0.5); 
+        }
+        s.lastSeen = tr.started_at;
       }
-      
-      const userFactsArray = userFactsData || [];
-      const allFactsArray = allFactsData || [];
-      
-      // Изчисляваме научените факти
-      const mastered = userFactsArray.filter(fact => fact.difficulty_rating < 3).length;
-      const inProgress = userFactsArray.filter(fact => fact.difficulty_rating >= 3 && fact.difficulty_rating <= 6).length;
-      const challenging = userFactsArray.filter(fact => fact.difficulty_rating > 6).length;
-      
-      setStats(prev => ({
-        ...prev,
-        masteredFacts: mastered,
-        inProgressFacts: inProgress,
-        challengingFacts: challenging
-      }));
-      
-      setUserFacts(userFactsArray);
-      setAllFacts(allFactsArray);
-      
-    } catch (err) {
-      console.error('Грешка при зареждане на данни за фактите:', err);
     }
+    
+    const result = Object.values(statsMap).map(s => ({
+      id: s.id, 
+      user_id: '', 
+      fact_id: s.id, 
+      difficulty_rating: s.difficultyRating,
+      correct_count: s.correctCount, 
+      incorrect_count: s.incorrectCount,
+      facts: { 
+        id: s.id, 
+        multiplicand: s.multiplicand, 
+        multiplier: s.multiplier 
+      }
+    }));
+    
+    console.log("Изчислени статистики за факти:", result);
+    return result;
   };
 
   const fetchTrainingData = async () => {
@@ -225,9 +241,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
           return training;
         });
         
+        // Зареждаме всички факти за heatmap
+        const { data: allFactsData, error: allFactsError } = await supabase
+          .from('facts').select('*').lte('multiplicand', 10).lte('multiplier', 10);
+        if (allFactsError) throw allFactsError;
+        setAllFacts(allFactsData || []);
+
         setTrainings(processedData);
         calculateStats(processedData);
         renderCharts(processedData);
+        
+        // Статистики на фактите от trainings
+        const calculatedUserFacts = calculateFactsStats(processedData);
+        console.log("Изчислени факти от тренировки:", calculatedUserFacts);
+        setUserFacts(calculatedUserFacts);
+        const mastered = calculatedUserFacts.filter(f => f.difficulty_rating < 3).length;
+        const inProgress = calculatedUserFacts.filter(f => f.difficulty_rating >= 3 && f.difficulty_rating <= 6).length;
+        const challenging = calculatedUserFacts.filter(f => f.difficulty_rating > 6).length;
+        setStats(prev => ({ ...prev, masteredFacts: mastered, inProgressFacts: inProgress, challengingFacts: challenging }));
+        
         setLoading(false);
       } catch (dbError) {
         console.error('Грешка при изпълнение на заявката:', dbError);
@@ -311,7 +343,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
     
     const accuracyData = sortedDates.map(date => {
       const dayData = trainingsByDay[date];
-      return dayData.totalProblems > 0
+      return dayData.totalProblems > 0 
         ? Math.round((dayData.totalCorrect / dayData.totalProblems) * 100)
         : 0;
     });
@@ -455,11 +487,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
   };
 
   const formatDuration = (seconds: number) => {
-    if (!seconds) return '0 сек';
-    if (seconds < 60) return `${seconds} сек`;
+    if (!seconds) return '0 сек.';
+    if (seconds < 60) return `${Math.round(seconds)} сек.`;
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes} мин ${remainingSeconds} сек`;
+    const remainingSeconds = Math.round(seconds % 60);
+    return `${minutes} мин. ${remainingSeconds} сек.`;
   };
 
   return (
@@ -692,53 +724,41 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                           const fact = allFacts.find(f => f.multiplicand === row && f.multiplier === col);
                           if (!fact) return null;
                           
-                          // Намираме потребителския факт, ако съществува
-                          const userFact = userFacts.find(uf => uf.fact_id === fact.id);
-                          
-                          // Определяме цвета базиран на точността
-                          let backgroundColor = '#f0f0f0'; // Сиво по подразбиране за неопитани факти
-                          let textColor = 'rgba(0, 0, 0, 0.7)';
-                          let tooltipText = `${row}×${col}=${row*col}\nНеопитан факт`;
-                          let accuracyText = '';
-                          
-                          if (userFact) {
-                            const correct = userFact.correct_count || 0;
-                            const incorrect = userFact.incorrect_count || 0;
-                            const attempts = correct + incorrect;
-                            const accuracy = attempts > 0 ? correct / attempts : 0;
-                            
-                            // Винаги показваме цвят ако имаме потребителски факт
-                            if (attempts > 0) {
-                              if (accuracy >= 0.8) {
-                                // Зелено за добро представяне
-                                backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                              } else if (accuracy >= 0.5) {
-                                // Жълто за средно представяне
-                                backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
-                              } else {
-                                // Червено за слабо представяне
-                                backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`;
-                                textColor = 'rgba(255, 255, 255, 0.87)';
+                          // Изчисляваме статистики от trainings
+                          let attempts = 0, correct = 0;
+                          trainings.forEach(t => { 
+                            if (!t.facts) return; 
+                            (Array.isArray(t.facts) ? t.facts : []).forEach(fr => {
+                              if (fr.fact.i === row && fr.fact.j === col) {
+                                attempts++;
+                                if (fr.isCorrect) correct++;
                               }
-                            } else {
-                              // За факти без опити, но с потребителски запис
-                              backgroundColor = `rgba(158, 158, 158, 0.3)`; // Сиво за неопитани факти
-                            }
-                            
-                            tooltipText = `${row}×${col}=${row*col}\nОпити: ${attempts}, Верни: ${correct}\nТочност: ${Math.round(accuracy * 100)}%`;
+                            }); 
+                          });
+                          const accuracy = attempts > 0 ? correct / attempts : 0;
+                          let backgroundColor = '#f0f0f0', textColor = 'rgba(0, 0, 0, 0.7)', tooltipText = `${row}×${col}=${row*col}\nНеопитан факт`, accuracyText = '';
+                          if (attempts > 0) {
+                            if (accuracy >= 0.8) backgroundColor = `rgba(0, 200, 83, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                            else if (accuracy >= 0.5) backgroundColor = `rgba(255, 193, 7, ${Math.min(0.3 + accuracy * 0.7, 1)})`;
+                            else { backgroundColor = `rgba(244, 67, 54, ${Math.min(0.3 + (1 - accuracy) * 0.7, 1)})`; textColor = 'rgba(255, 255, 255, 0.87)'; }
+                            tooltipText = `${row}×${col}=${row*col}\nОпити: ${attempts}, Правилни: ${correct}\nТочност: ${Math.round(accuracy * 100)}%`;
                             accuracyText = `${Math.round(accuracy * 100)}%`;
                           }
-                          
+                          // Изчисляваме трудност за всеки факт
+                          // Изчисляваме трудността директно от опитите
+                          let difficultyRating = 5.0;
+                          if (attempts > 0) {
+                            // Начална трудност 5.0
+                            // За всеки правилен отговор -0.2, за всеки грешен +0.5
+                            difficultyRating = 5.0 + (correct * -0.2) + ((attempts - correct) * 0.5);
+                            // Ограничаваме до пределите 1-10
+                            difficultyRating = Math.max(1, Math.min(10, difficultyRating));
+                          }
                           return (
                             <div 
                               key={`${row}-${col}`}
                               className="heatmap-cell" 
                               onMouseEnter={(e) => {
-                                const correct = userFact ? userFact.correct_count || 0 : 0;
-                                const incorrect = userFact ? userFact.incorrect_count || 0 : 0;
-                                const attempts = correct + incorrect;
-                                const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
-                                
                                 const content = (
                                   <div className="bg-white p-3 rounded shadow-lg border border-gray-200">
                                     <div className="text-lg font-bold text-purple-800">{row} × {col} = {row * col}</div>
@@ -750,26 +770,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onClose }) => {
                                       <div className="font-medium text-green-600">{correct}</div>
                                       
                                       <div className="text-gray-600">Грешни:</div>
-                                      <div className="font-medium text-red-600">{incorrect}</div>
+                                      <div className="font-medium text-red-600">{attempts - correct}</div>
                                       
                                       <div className="text-gray-600">Точност:</div>
                                       <div className="font-medium flex items-center">
-                                        <span>{accuracy}%</span>
+                                        <span>{Math.round(accuracy * 100)}%</span>
                                         <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
                                           <div 
                                             className={`h-2 rounded-full ${
-                                              accuracy >= 80 ? 'bg-green-500' : 
-                                              accuracy >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                              accuracy >= 0.8 ? 'bg-green-500' : 
+                                              accuracy >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'
                                             }`} 
-                                            style={{ width: `${accuracy}%` }}
+                                            style={{ width: `${Math.round(accuracy * 100)}%` }}
                                           ></div>
                                         </div>
                                       </div>
-                                      
                                       <div className="text-gray-600">Трудност:</div>
-                                      <div className="font-medium">
-                                        {userFact?.difficulty_rating ? userFact.difficulty_rating.toFixed(1) : "Няма данни"}
-                                      </div>
+                                      <div className="font-medium">{difficultyRating.toFixed(1)}</div>
                                     </div>
                                   </div>
                                 );
