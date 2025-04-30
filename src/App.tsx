@@ -168,10 +168,11 @@ export default function App() {
     }
 
     setScore(newScore)
+    // Запазваме текущия факт като предишен, за да го изключим от следващото теглене
+    prevFactRef.current = fact;
     // Избираме нов факт, различен от предишния
     const newFact = randomFact(prevFactRef.current);
     setFact(newFact);
-    prevFactRef.current = fact;
   }
 
   const restart = async () => {

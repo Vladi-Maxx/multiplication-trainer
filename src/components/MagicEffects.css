@@ -1,0 +1,182 @@
+/* Стилове за магически ефекти в албума с дракони */
+
+/* Звезден фон с псевдо-елементи вместо множество DOM елементи */
+.starry-background {
+  background-color: transparent;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 50; /* Значително увеличен z-index, за да е над всичко */
+  pointer-events: none; /* Пропускаме кликовете през звездите */
+}
+
+/* Множество звезди чрез псевдо-елементи :before и :after */
+.starry-background:before,
+.starry-background:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, white, rgba(255,255,255,0)),
+    radial-gradient(2px 2px at 40px 70px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 90px 40px, white, rgba(255,255,255,0)),
+    radial-gradient(2px 2px at 160px 120px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 230px 190px, white, rgba(255,255,255,0)),
+    radial-gradient(3px 3px at 320px 250px, rgba(138, 43, 226, 0.5), rgba(138, 43, 226, 0)),
+    radial-gradient(1px 1px at 450px 180px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 570px 290px, white, rgba(255,255,255,0));
+  background-repeat: repeat;
+  background-size: 650px 650px;
+  opacity: 0.7;
+  animation: twinkle 5s ease-in-out infinite alternate;
+}
+
+.starry-background:after {
+  background-image: 
+    radial-gradient(2px 2px at 100px 50px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 150px 110px, white, rgba(255,255,255,0)),
+    radial-gradient(2px 2px at 200px 20px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 300px 180px, white, rgba(255,255,255,0)),
+    radial-gradient(3px 3px at 370px 90px, rgba(99, 102, 241, 0.5), rgba(99, 102, 241, 0)),
+    radial-gradient(1px 1px at 520px 220px, white, rgba(255,255,255,0)),
+    radial-gradient(2px 2px at 400px 280px, white, rgba(255,255,255,0)),
+    radial-gradient(1px 1px at 250px 340px, white, rgba(255,255,255,0));
+  background-size: 580px 580px;
+  animation-delay: 1s;
+  opacity: 0.5;
+}
+
+/* Искричка следваща курсора */
+.cursor-sparkle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  background-image: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.9) 0%, 
+    rgba(147, 51, 234, 0.8) 30%, 
+    rgba(79, 70, 229, 0.6) 60%, 
+    transparent 70%
+  );
+  animation: sparkle 0.7s forwards ease-out;
+}
+
+/* Следващи 4 класа създават различни цветове на искрички */
+.cursor-sparkle:nth-child(4n+1) {
+  width: 8px;
+  height: 8px;
+  background-image: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.9) 0%, 
+    rgba(139, 92, 246, 0.8) 30%, 
+    rgba(99, 102, 241, 0.6) 60%, 
+    transparent 70%
+  );
+}
+
+.cursor-sparkle:nth-child(4n+2) {
+  width: 12px;
+  height: 12px;
+  background-image: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.9) 0%, 
+    rgba(59, 130, 246, 0.8) 30%, 
+    rgba(37, 99, 235, 0.6) 60%, 
+    transparent 70%
+  );
+}
+
+.cursor-sparkle:nth-child(4n+3) {
+  width: 10px;
+  height: 10px;
+  background-image: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.9) 0%, 
+    rgba(6, 182, 212, 0.8) 30%, 
+    rgba(8, 145, 178, 0.6) 60%, 
+    transparent 70%
+  );
+}
+
+.cursor-sparkle:nth-child(4n+4) {
+  width: 14px;
+  height: 14px;
+  background-image: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.9) 0%, 
+    rgba(192, 132, 252, 0.8) 30%, 
+    rgba(168, 85, 247, 0.6) 60%, 
+    transparent 70%
+  );
+}
+
+/* Анимации */
+@keyframes twinkle {
+  0%, 100% { 
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes sparkle {
+  0% { 
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Анимация за драконите */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(-1deg); }
+}
+
+/* Магически анимации за плуване на звездите */
+@keyframes floating-star {
+  0% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(calc(var(--float-distance) * -1)) translateX(calc(var(--float-distance) * 0.5)); }
+  50% { transform: translateY(0) translateX(var(--float-distance)); }
+  75% { transform: translateY(var(--float-distance)) translateX(calc(var(--float-distance) * 0.5)); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes swimming-star {
+  0% { transform: translateY(0) translateX(0); }
+  33% { transform: translateY(calc(var(--float-distance) * -0.6)) translateX(var(--float-distance)); }
+  66% { transform: translateY(var(--float-distance)) translateX(calc(var(--float-distance) * -0.5)); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Класове за анимация на драконите */
+.dragon-float {
+  animation: float 3s ease-in-out infinite alternate;
+}
+
+.dragon-float-slow {
+  animation: float 4s ease-in-out infinite alternate;
+}
+
+.dragon-float-fast {
+  animation: float 2.5s ease-in-out infinite alternate;
+}
