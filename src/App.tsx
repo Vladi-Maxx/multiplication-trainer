@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import FlashCard, { Fact } from './components/FlashCard.tsx'
+import FlashCard from './components/FlashCard.tsx'
+import { Fact } from './services/types'
 import InputAndKeypad from './components/InputAndKeypad'
 import Summary from './components/Summary.tsx'
 import { randomFact } from './utils/facts.ts'
 import { loadFacts, saveFacts, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
 import { initializeSession } from './services/supabase'
-import dragonPic from '../Pics/Dragon 1.png'
+// Импортираме функциите за работа с дракони
+import { getAllDragons, getLockedDragons, getUnlockedDragons, selectDragonForGame, unlockDragon, getDragonImageUrl } from './services/dragons'
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
@@ -29,6 +31,12 @@ export default function App() {
   const [lastCorrect, setLastCorrect] = useState(null)
   const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
   const progressRef = React.useRef<HTMLDivElement>(null);
+  // Добавяме ново състояние за текущо избраното драконче
+  const [currentDragon, setCurrentDragon] = useState<any>(null);
+  // Състояние за зареждане на драконите
+  const [dragonsLoading, setDragonsLoading] = useState(false);
+  // URL към изображението на дракона
+  const [dragonImageUrl, setDragonImageUrl] = useState<string>('');
   const [progressWidth, setProgressWidth] = React.useState(0);
   React.useEffect(() => {
     if (progressRef.current) {
@@ -56,6 +64,9 @@ export default function App() {
         if (isConnected) {
           // Инициализираме фактите в базата (ако вече съществуват, няма да се променят)
           await initializeSupabaseFactsData();
+          
+          // Зареждаме драконите и избираме текущ дракон
+          await loadDragonsAndSelectCurrent();
         } else {
           console.log('Няма връзка със Supabase, работим само с localStorage');
         }
@@ -66,6 +77,32 @@ export default function App() {
       loadFacts();
     };
     initializeApp();
+    
+    // Функция за зареждане на драконите и избор на текущ дракон
+    async function loadDragonsAndSelectCurrent() {
+      try {
+        setDragonsLoading(true);
+        // Избираме дракон за играта (първо неотключен или случаен от отключените)
+        const dragon = await selectDragonForGame();
+        if (dragon) {
+          setCurrentDragon(dragon);
+          // Генерираме URL към изображението
+          const imageUrl = getDragonImageUrl(dragon);
+          setDragonImageUrl(imageUrl);
+          console.log('Избран дракон за играта:', dragon.name);
+        } else {
+          console.warn('Няма намерени дракони в базата данни');
+          // Използваме локално изображение като резервен вариант
+          setDragonImageUrl('/Pics/Dragon 1.png');
+        }
+      } catch (error) {
+        console.error('Грешка при зареждане на дракони:', error);
+        // Използваме локално изображение като резервен вариант
+        setDragonImageUrl('/Pics/Dragon 1.png');
+      } finally {
+        setDragonsLoading(false);
+      }
+    };
   }, [])
 
   const handleSubmit = (ok, duration, timedOut) => {
@@ -83,12 +120,12 @@ export default function App() {
       fact: {
         i: fact.i,
         j: fact.j,
-        correctCount: 0,
-        wrongCount: 0,
-        streak: 0,
-        avgTime: 0,
-        attempts: 0,
-        box: 1,
+        correctCount: existingFact?.correctCount || 0,
+        wrongCount: existingFact?.wrongCount || 0,
+        streak: existingFact?.streak || 0,
+        avgTime: existingFact?.avgTime || 0,
+        attempts: existingFact?.attempts || 0,
+        box: existingFact?.box || 1,
         lastPracticed: new Date().toISOString(),
         nextPractice: new Date().toISOString(),
         difficultyRating: currentDifficulty
@@ -96,32 +133,72 @@ export default function App() {
       isCorrect: ok,
       responseTime: duration
     });
-    setPuzzleRevealedCount(prev => ok ? Math.min(prev + 2, 60) : Math.max(prev - 1, 0));
-    const next = score + (ok ? POINT_CORRECT : POINT_WRONG);
-    setScore(next);
-    if (next >= TARGET_SCORE) {
-      setFinished(true);
-      finishTraining();
+
+    const newScore = score + (ok ? POINT_CORRECT : POINT_WRONG)
+
+    if (ok) {
+      if (score < TARGET_SCORE && newScore >= TARGET_SCORE) {
+        // Играчът е достигнал целта точно сега
+        setScore(newScore)
+        setFinished(true)
+        finishTraining();
+        
+        // Отключваме текущия дракон, ако има такъв и не е отключен
+        if (currentDragon && !currentDragon.unlocked) {
+          unlockDragon(currentDragon.id)
+            .then(success => {
+              if (success) {
+                console.log(`Дракон ${currentDragon.name} е отключен успешно!`);
+              } else {
+                console.error(`Неуспешно отключване на дракон ${currentDragon.name}`);
+              }
+            })
+            .catch(error => {
+              console.error('Грешка при отключване на дракон:', error);
+            });
+        }
+        
+        return
+      }
+      // Разкриваме 1 плочка при правилен отговор
+      setPuzzleRevealedCount(prev => prev + 1);
     }
-    console.log('prevFactRef.current:', prevFactRef.current);
+
+    setScore(newScore)
+    setFact(randomFact(prevFactRef.current))
     const newFact = randomFact(prevFactRef.current);
     console.log('newFact:', newFact);
     setFact(newFact);
     prevFactRef.current = fact;
   }
 
-  const restart = () => {
+  const restart = async () => {
     setScore(0)
     setFact(randomFact())
+    prevFactRef.current = null
+    setPuzzleRevealedCount(0)
     setFinished(false)
     setScreen('home'); // При рестарт се връщаме на началния екран
     startTraining(); // При рестарт започни нова тренировка
+    
+    // Избираме нов дракон при рестарт
+    try {
+      const dragon = await selectDragonForGame();
+      if (dragon) {
+        setCurrentDragon(dragon);
+        const imageUrl = getDragonImageUrl(dragon);
+        setDragonImageUrl(imageUrl);
+        console.log('Избран нов дракон за играта при рестарт:', dragon.name);
+      }
+    } catch (error) {
+      console.error('Грешка при избор на нов дракон при рестарт:', error);
+    }
   }
 
   if (screen === 'home') {
     return (
       <HomeScreen
-        onPlay={() => {
+        onPlay={async () => {
           setScreen('game');
           setFinished(false);
           setScore(0);
@@ -130,6 +207,20 @@ export default function App() {
           prevFactRef.current = null;
           setFact(randomFact());
           startTraining();
+          
+          // Избираме нов дракон при започване на нова игра
+          try {
+            const dragon = await selectDragonForGame();
+            if (dragon) {
+              setCurrentDragon(dragon);
+              const imageUrl = getDragonImageUrl(dragon);
+              setDragonImageUrl(imageUrl);
+              console.log('Избран нов дракон за играта:', dragon.name);
+            }
+          } catch (error) {
+            console.error('Грешка при избор на нов дракон:', error);
+          }
+          
           setTimeout(() => {
             if (progressRef.current) setProgressWidth(progressRef.current.offsetWidth);
           }, 0);
@@ -209,7 +300,10 @@ export default function App() {
           <div className="puzzle-placeholder">
             {/* Тук ще сложим canvas или SVG за пъзела в бъдеще */}
           </div>
-          <PuzzleSVG revealedCount={puzzleRevealedCount} />
+          <PuzzleSVG 
+            revealedCount={puzzleRevealedCount} 
+            dragonImageUrl={dragonImageUrl || '/Pics/Dragon 1.png'} 
+          />
         </div>
         {/* Централен панел - само задачата */}
         <div className="flash-card-panel">

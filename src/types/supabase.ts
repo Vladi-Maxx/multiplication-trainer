@@ -218,6 +218,33 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      },
+      dragons: {
+        Row: {
+          id: string
+          name: string
+          image_path: string
+          unlock_requirement: number
+          unlocked: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          image_path: string
+          unlock_requirement?: number
+          unlocked?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          image_path?: string
+          unlock_requirement?: number
+          unlocked?: boolean
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

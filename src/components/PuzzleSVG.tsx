@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import dragonPic from '../../Pics/Dragon 1.png';
 
 // Тип за частица
 interface Particle {
@@ -28,9 +27,10 @@ const TOTAL = ROWS * COLS;
 
 interface PuzzleSVGProps {
   revealedCount: number;
+  dragonImageUrl: string; // URL към изображението на дракона
 }
 
-export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
+export default function PuzzleSVG({ revealedCount, dragonImageUrl }: PuzzleSVGProps) {
   // CSS-in-JS shake style
   if (typeof document !== 'undefined' && !document.getElementById('puzzle-shake-style')) {
     const style = document.createElement('style');
@@ -266,12 +266,11 @@ export default function PuzzleSVG({ revealedCount }: PuzzleSVGProps) {
           </linearGradient>
         </defs>
         <image
-          href={dragonPic}
-          x={0}
-          y={0}
-          width={IMG_W}
-          height={IMG_H}
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
+          id="dragon-image"
+          width="100%"
+          height="100%"
+          href={dragonImageUrl}
+          opacity={1}
         />
         {/* Общ glow филтър за всички частици */}
         <defs>
