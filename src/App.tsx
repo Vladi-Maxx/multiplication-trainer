@@ -160,14 +160,16 @@ export default function App() {
         
         return
       }
-      // Разкриваме 1 плочка при правилен отговор
-      setPuzzleRevealedCount(prev => prev + 1);
+      // При правилен отговор разкриваме 2 парченца от пъзела (максимум 60)
+      setPuzzleRevealedCount(prev => Math.min(prev + 2, 60));
+    } else {
+      // При грешен отговор скриваме 1 парченце от пъзела (минимум 0)
+      setPuzzleRevealedCount(prev => Math.max(prev - 1, 0));
     }
 
     setScore(newScore)
-    setFact(randomFact(prevFactRef.current))
+    // Избираме нов факт, различен от предишния
     const newFact = randomFact(prevFactRef.current);
-    console.log('newFact:', newFact);
     setFact(newFact);
     prevFactRef.current = fact;
   }
