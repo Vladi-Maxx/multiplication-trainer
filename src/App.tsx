@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react'
-import FlashCard from './components/FlashCard.tsx'
-import { Fact } from './services/types'
-import InputAndKeypad from './components/InputAndKeypad'
-import Summary from './components/Summary.tsx'
-import { randomFact } from './utils/facts.ts'
-import { loadFacts, saveFacts, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage'
+import React, { useState, useRef, useEffect } from 'react';
+import { randomFact } from './utils/facts';
+import type { Fact } from './services/types';
+import { loadFacts, saveFacts, initializeSupabaseFactsData, checkSupabaseConnection, startTraining, addFactToCurrentTraining, finishTraining } from './services/storage';
+import Summary from './components/Summary';
+import PuzzleSVG from './components/PuzzleSVG';
+import Dashboard from './components/Dashboard';
+import HomeScreen from './components/HomeScreen';
+import AlbumScreen from './components/AlbumScreen';
+import InputAndKeypad from './components/InputAndKeypad';
+import VictoryVideo from './components/VictoryVideo';
 import { initializeSession } from './services/supabase'
 // Импортираме функциите за работа с дракони
 import { getAllDragons, getLockedDragons, getUnlockedDragons, selectDragonForGame, unlockDragon, getDragonImageUrl } from './services/dragons'
@@ -12,11 +16,6 @@ import { getAllDragons, getLockedDragons, getUnlockedDragons, selectDragonForGam
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
 const POINT_WRONG = -5
-
-import PuzzleSVG from './components/PuzzleSVG';
-import Dashboard from './components/Dashboard';
-import HomeScreen from './components/HomeScreen';
-import AlbumScreen from './components/AlbumScreen';
 import Album from './components/Album';
 
 type Screen = 'home' | 'game' | 'dashboard' | 'album';
@@ -27,6 +26,7 @@ export default function App() {
   const [fact, setFact] = useState<Fact>(() => randomFact())
   const prevFactRef = React.useRef<Fact | null>(null);
   const [isFinished, setFinished] = useState(false)
+  const [showVictoryVideo, setShowVictoryVideo] = useState(false)
   const [paused, setPaused] = useState(false)
   const [lastCorrect, setLastCorrect] = useState(null)
   const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
@@ -140,7 +140,7 @@ export default function App() {
       if (score < TARGET_SCORE && newScore >= TARGET_SCORE) {
         // Играчът е достигнал целта точно сега
         setScore(newScore)
-        setFinished(true)
+        setShowVictoryVideo(true)  // Първо показваме видеото за победа
         finishTraining();
         
         // Отключваме текущия дракон, ако има такъв и не е отключен
@@ -255,6 +255,15 @@ export default function App() {
       </div>
     )
   }
+  // Показваме видеото за победа, когато флагът е активен
+  if (showVictoryVideo) {
+    return <VictoryVideo onVideoEnd={() => {
+      setShowVictoryVideo(false);
+      setFinished(true);  // След видеото отбелязваме играта като завършена
+    }} />;
+  }
+  
+  // Показваме Summary екрана след гледане на видеото
   if (isFinished) return <Summary score={score} onRestart={restart} />
 
   return (

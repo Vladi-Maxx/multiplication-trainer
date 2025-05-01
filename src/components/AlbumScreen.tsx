@@ -183,7 +183,7 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
                   <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-indigo-600 opacity-0 group-hover:opacity-70 blur rounded-xl -z-10 group-hover:animate-pulse transition-opacity"></div>
                   
                   {/* Изображение на дракона */}
-                  <div className="w-full aspect-[3/4] bg-gradient-to-br from-indigo-800/40 to-purple-900/40 backdrop-blur-sm relative z-10 flex items-center justify-center p-3 border border-indigo-500/20">
+                  <div className="w-full aspect-[3/4] bg-gradient-to-br from-indigo-800/40 to-purple-900/40 backdrop-blur-sm relative z-10 flex items-center justify-center p-3 border border-indigo-500/50 shadow-md rounded-xl transition-all duration-500 group-hover:shadow-indigo-500/40 group-hover:shadow-lg group-hover:border-indigo-500/80">
                     {dragon.unlocked ? (
                       <img
                         src={getDragonImageUrl(dragon) || dragonImg}

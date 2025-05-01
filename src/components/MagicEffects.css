@@ -52,20 +52,21 @@
 
 /* Искричка следваща курсора */
 .cursor-sparkle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
+  position: fixed;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 100;
+  z-index: 999;
   transform: translate(-50%, -50%);
   background-image: radial-gradient(circle, 
-    rgba(255, 255, 255, 0.9) 0%, 
-    rgba(147, 51, 234, 0.8) 30%, 
-    rgba(79, 70, 229, 0.6) 60%, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(147, 51, 234, 0.9) 30%, 
+    rgba(79, 70, 229, 0.8) 60%, 
     transparent 70%
   );
   animation: sparkle 0.7s forwards ease-out;
+  box-shadow: 0 0 10px 5px rgba(138, 43, 226, 0.4);
 }
 
 /* Следващи 4 класа създават различни цветове на искрички */
