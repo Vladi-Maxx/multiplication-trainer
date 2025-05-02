@@ -10,6 +10,7 @@ interface AlbumScreenProps {
 
 // Запазваме резервно изображение, ако няма отключени дракони
 import dragonImg from '../../Pics/Dragon 1.png';
+const lockedDragonImg = '/Pics/Mystical Card with Glowing Runes.png';
 
 const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
   // Състояние за всички дракони
@@ -191,10 +192,11 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
                         className="w-full h-full object-contain rounded-lg transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                        <div className="text-5xl mb-4">🔮</div>
-                        <p className="text-indigo-200 text-center">Това същество чака да бъде открито</p>
-                      </div>
+                      <img
+                        src={lockedDragonImg}
+                        alt="Заключен дракон"
+                        className="w-full h-full object-contain rounded-lg opacity-60"
+                      />
                     )}
                   </div>
                   
