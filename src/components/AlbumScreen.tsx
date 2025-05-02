@@ -11,6 +11,7 @@ interface AlbumScreenProps {
 // Запазваме резервно изображение, ако няма отключени дракони
 import dragonImg from '../../Pics/Dragon 1.png';
 const lockedDragonImg = '/Pics/Mystical Card with Glowing Runes.png';
+const titleImage = encodeURI('/Pics/ChatGPT Image May 2, 2025, 07_37_44 PM.png');
 
 const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
   // Състояние за всички дракони
@@ -134,17 +135,18 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
         <div className="absolute -inset-10 bg-gradient-radial from-blue-500/30 via-purple-500/10 to-transparent blur-2xl z-0"></div>
 
         {/* Заглавие и бутон Назад */}
-        <div className="bg-gradient-to-r from-indigo-800/80 to-purple-800/80 p-6 flex justify-between items-center backdrop-blur relative z-10">
-          <div>
-            <h1 className="text-3xl font-bold text-white drop-shadow-lg flex items-center">
-              <span className="text-4xl mr-2">🐉</span> 
-              Магически дракони
-            </h1>
-            <p className="text-indigo-200 mt-1">Твоята колекция от редки същества</p>
+        <div className="bg-gradient-to-r from-indigo-800/80 to-purple-800/80 px-4 py-2 flex items-center backdrop-blur relative z-10 gap-4">
+          <div className="flex-1 flex items-center justify-center min-w-0">
+            <img
+              src={titleImage}
+              alt="Магически дракони"
+              className="max-w-full max-h-[100px] w-auto h-auto object-contain mx-auto drop-shadow-[0_2px_24px_rgba(255,140,0,0.7)]"
+              style={{display: 'block'}}
+            />
           </div>
           <button
             onClick={onBack}
-            className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-lg text-white font-semibold border border-white/20 hover:bg-white/20 transition-all"
+            className="aspect-square h-[72px] min-h-[48px] max-h-[100px] flex items-center justify-center rounded-full text-lg font-bold bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 border-2 border-white/40 shadow-2xl shadow-purple-700/60 hover:shadow-[0_0_32px_8px_rgba(255,140,0,0.7)] hover:scale-105 transition-all duration-200 ml-2 outline-none focus:ring-4 focus:ring-orange-300/50"
           >
             Назад
           </button>
