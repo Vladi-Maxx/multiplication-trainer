@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Преглед на факти от таблицата за умножение</title>
+  <link rel="icon" href="data:,">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f7ff;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #4F46E5;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #4F46E5;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #3730a3;
+    }
+    .facts-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    .facts-table th {
+      background-color: #e0e7ff;
+      padding: 10px;
+      text-align: left;
+      border-bottom: 2px solid #c7d2fe;
+    }
+    .facts-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .facts-table tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+    .facts-table tr:hover {
+      background-color: #f3f4f6;
+    }
+    .box-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    .box-1 { background-color: #ef4444; }
+    .box-2 { background-color: #f97316; }
+    .box-3 { background-color: #eab308; }
+    .box-4 { background-color: #22c55e; }
+    .box-5 { background-color: #3b82f6; }
+    .streak-indicator {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 12px;
+      background-color: #e0e7ff;
+      color: #4338ca;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .heat-map {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-gap: 4px;
+      margin-top: 30px;
+      margin-bottom: 30px;
+    }
+    .heat-cell {
+      aspect-ratio: 1/1;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      position: relative;
+      cursor: pointer;
+    }
+    .cell-data {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      display: none;
+      z-index: 10;
+    }
+    .heat-cell:hover .cell-data {
+      display: block;
+    }
+    .table-controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .filter-select {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+    .search-box {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      flex-grow: 1;
+    }
+    .export-button {
+      background-color: #10b981;
+    }
+    .export-button:hover {
+      background-color: #059669;
+    }
+    .refresh-button {
+      background-color: #6366f1;
+    }
+    .refresh-button:hover {
+      background-color: #4f46e5;
+    }
+    .progress-indicators {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .progress-card {
+      background-color: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
+    }
+    .progress-card .title {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    .progress-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4F46E5;
+    }
+    .summary-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .summary-section h2 {
+      color: #4F46E5;
+      margin-bottom: 15px;
+    }
+    .back-button {
+      background-color: #6B7280;
+      margin-bottom: 20px;
+    }
+    .back-button:hover {
+      background-color: #4B5563;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="back-button" onclick="location.href='/'">← Назад към приложението</button>
+    
+    <h1>Преглед на факти от таблицата за умножение</h1>
+    
+    <div class="progress-indicators" id="progress-cards">
+      <!-- Ще се попълни динамично -->
+    </div>
+    
+    <div class="controls">
+      <div class="table-controls">
+        <input type="text" class="search-box" id="search-input" placeholder="Търсене...">
+        <select class="filter-select" id="box-filter">
+          <option value="">Всички кутии</option>
+          <option value="1">Кутия 1</option>
+          <option value="2">Кутия 2</option>
+          <option value="3">Кутия 3</option>
+          <option value="4">Кутия 4</option>
+          <option value="5">Кутия 5</option>
+        </select>
+        <select class="filter-select" id="sort-by">
+          <option value="difficulty">Сортиране по трудност</option>
+          <option value="box">Сортиране по кутия</option>
+          <option value="streak">Сортиране по серия</option>
+          <option value="lastPractice">Сортиране по последна практика</option>
+          <option value="nextPractice">Сортиране по следваща практика</option>
+          <option value="avgTime">Сортиране по средно време</option>
+          <option value="accuracy">Сортиране по точност</option>
+        </select>
+      </div>
+      <div>
+        <button class="refresh-button" id="refresh-button">Опресни данните</button>
+        <button class="export-button" id="export-button">Изтегли като CSV</button>
+      </div>
+    </div>
+    
+    <!-- Топлинната карта е премахната по желание на потребителя -->
+    
+    <div class="table-container">
+      <table class="facts-table" id="facts-table">
+        <thead>
+          <tr>
+            <th>Факт</th>
+            <th>Кутия</th>
+            <th>Серия</th>
+            <th>Правилни</th>
+            <th>Грешни</th>
+            <th>Точност</th>
+            <th>Средно време</th>
+            <th>Трудност</th>
+            <th>Последна практика</th>
+            <th>Следваща практика</th>
+          </tr>
+        </thead>
+        <tbody id="facts-tbody">
+          <!-- Ще се попълни динамично -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="summary-section">
+      <h2>Обобщение</h2>
+      <div id="summary-content">
+        <!-- Ще се попълни динамично -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Зареждане на данните
+      loadAndDisplayData();
+      
+      // Слушатели за събития
+      document.getElementById('refresh-button').addEventListener('click', loadAndDisplayData);
+      document.getElementById('export-button').addEventListener('click', exportToCSV);
+      document.getElementById('search-input').addEventListener('input', applyFilters);
+      document.getElementById('box-filter').addEventListener('change', applyFilters);
+      document.getElementById('sort-by').addEventListener('change', applyFilters);
+    });
+    
+    // Основна функция за зареждане и показване на данните
+    function loadAndDisplayData() {
+      const facts = loadFacts();
+      
+      if (!facts || facts.length === 0) {
+        document.getElementById('facts-tbody').innerHTML = '<tr><td colspan="10">Няма записани факти в localStorage.</td></tr>';
+        return;
+      }
+      
+      // Показване на данните във всички секции
+      displayTable(facts);
+      displaySummary(facts);
+      displayProgressCards(facts);
+    }
+    
+    // Зареждане на фактите от localStorage
+    function loadFacts() {
+      const factsJson = localStorage.getItem('facts');
+      
+      if (!factsJson) {
+        return [];
+      }
+      
+      try {
+        return JSON.parse(factsJson);
+      } catch (e) {
+        console.error('Грешка при парсване на facts от localStorage:', e);
+        return [];
+      }
+    }
+    
+    // Показване на фактите в таблицата
+    function displayTable(facts) {
+      const tbody = document.getElementById('facts-tbody');
+      tbody.innerHTML = '';
+      
+      facts.forEach(fact => {
+        const row = document.createElement('tr');
+        
+        // Изчисляване на точността
+        const accuracy = fact.attempts > 0 
+          ? Math.round((fact.correctCount / fact.attempts) * 100) 
+          : 0;
+        
+        // Форматиране на датите
+        const nextPracticeDate = new Date(fact.nextPractice);
+        const lastPracticedDate = new Date(fact.lastPracticed);
+        const now = new Date();
+        const isPastDue = nextPracticeDate < now;
+        
+        // Определяне дали е време за практика
+        const isDue = isPastDue ? 'due' : '';
+        
+        // Форматиране на датите за показване
+        const formattedLastPracticed = formatDateShort(fact.lastPracticed);
+        const formattedNextPractice = formatDateShort(fact.nextPractice);
+        
+        row.innerHTML = `
+          <td><strong>${fact.i} × ${fact.j} = ${fact.i * fact.j}</strong></td>
+          <td>
+            <span class="box-indicator box-${fact.box}"></span>
+            ${fact.box}
+          </td>
+          <td>
+            <span class="streak-indicator">${fact.streak}</span>
+          </td>
+          <td>${fact.correctCount}</td>
+          <td>${fact.wrongCount}</td>
+          <td>${accuracy}%</td>
+          <td>${fact.avgTime.toFixed(1)}s</td>
+          <td>${fact.difficultyRating.toFixed(1)}</td>
+          <td>${formattedLastPracticed}</td>
+          <td>${formattedNextPractice}</td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
+    
+    // Филтриране и сортиране на таблицата
+    function applyFilters() {
+      let facts = loadFacts();
+      
+      // Филтриране по търсене
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      if (searchTerm) {
+        facts = facts.filter(fact => 
+          `${fact.i} × ${fact.j}`.includes(searchTerm) ||
+          `${fact.i * fact.j}`.includes(searchTerm)
+        );
+      }
+      
+      // Филтриране по кутия
+      const boxFilter = document.getElementById('box-filter').value;
+      if (boxFilter) {
+        facts = facts.filter(fact => fact.box === parseInt(boxFilter));
+      }
+      
+      // Сортиране
+      const sortBy = document.getElementById('sort-by').value;
+      facts.sort((a, b) => {
+        switch (sortBy) {
+          case 'difficulty':
+            return b.difficultyRating - a.difficultyRating;
+          case 'box':
+            return a.box - b.box;
+          case 'streak':
+            return b.streak - a.streak;
+          case 'lastPractice':
+            return new Date(b.lastPracticed) - new Date(a.lastPracticed); // Най-скорошните най-отгоре
+          case 'nextPractice':
+            return new Date(a.nextPractice) - new Date(b.nextPractice); // Най-скоро предстоящите най-отгоре
+          case 'avgTime':
+            return b.avgTime - a.avgTime;
+          case 'accuracy':
+            // Изчисляваме точността за всеки факт
+            const accuracyA = a.attempts > 0 ? a.correctCount / a.attempts : 0;
+            const accuracyB = b.attempts > 0 ? b.correctCount / b.attempts : 0;
+            return accuracyB - accuracyA; // Най-точните най-отгоре
+          default:
+            return 0;
+        }
+      });
+      
+      // Актуализиране на таблицата с филтрирани данни
+      displayTable(facts);
+    }
+    
+    // Функцията за топлинната карта е премахната по желание на потребителя
+    
+    // Показване на обобщението
+    function displaySummary(facts) {
+      const summaryContent = document.getElementById('summary-content');
+      
+      // Изчисляване на статистики
+      const totalFacts = facts.length;
+      const factsBox1 = facts.filter(f => f.box === 1).length;
+      const factsBox2 = facts.filter(f => f.box === 2).length;
+      const factsBox3 = facts.filter(f => f.box === 3).length;
+      const factsBox4 = facts.filter(f => f.box === 4).length;
+      const factsBox5 = facts.filter(f => f.box === 5).length;
+      
+      const totalAttempts = facts.reduce((sum, fact) => sum + fact.attempts, 0);
+      const totalCorrect = facts.reduce((sum, fact) => sum + fact.correctCount, 0);
+      const totalAccuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+      
+      const avgDifficulty = facts.reduce((sum, fact) => sum + fact.difficultyRating, 0) / totalFacts;
+      
+      const now = new Date();
+      const dueFacts = facts.filter(fact => new Date(fact.nextPractice) <= now).length;
+      
+      // Показване на статистиките
+      summaryContent.innerHTML = `
+        <p>Общо факти: <strong>${totalFacts}</strong></p>
+        <p>Разпределение по кутии:</p>
+        <ul>
+          <li>Кутия 1: ${factsBox1} (${Math.round(factsBox1/totalFacts*100)}%)</li>
+          <li>Кутия 2: ${factsBox2} (${Math.round(factsBox2/totalFacts*100)}%)</li>
+          <li>Кутия 3: ${factsBox3} (${Math.round(factsBox3/totalFacts*100)}%)</li>
+          <li>Кутия 4: ${factsBox4} (${Math.round(factsBox4/totalFacts*100)}%)</li>
+          <li>Кутия 5: ${factsBox5} (${Math.round(factsBox5/totalFacts*100)}%)</li>
+        </ul>
+        <p>Общо опити: <strong>${totalAttempts}</strong></p>
+        <p>Общо верни отговори: <strong>${totalCorrect}</strong></p>
+        <p>Обща точност: <strong>${totalAccuracy}%</strong></p>
+        <p>Средна трудност: <strong>${avgDifficulty.toFixed(2)}</strong></p>
+        <p>Факти за тренировка: <strong>${dueFacts}</strong></p>
+      `;
+    }
+    
+    // Показване на карти с прогрес
+    function displayProgressCards(facts) {
+      const progressCards = document.getElementById('progress-cards');
+      
+      const totalFacts = facts.length;
+      const now = new Date();
+      const dueFacts = facts.filter(fact => new Date(fact.nextPractice) <= now).length;
+      const masterFacts = facts.filter(fact => fact.box >= 4).length;
+      const totalAttempts = facts.reduce((sum, fact) => sum + fact.attempts, 0);
+      const totalCorrect = facts.reduce((sum, fact) => sum + fact.correctCount, 0);
+      const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+      const avgDifficulty = facts.reduce((sum, fact) => sum + fact.difficultyRating, 0) / totalFacts;
+      
+      progressCards.innerHTML = `
+        <div class="progress-card">
+          <div class="title">Общо факти</div>
+          <div class="value">${totalFacts}</div>
+        </div>
+        <div class="progress-card">
+          <div class="title">За тренировка</div>
+          <div class="value">${dueFacts}</div>
+        </div>
+        <div class="progress-card">
+          <div class="title">Усвоени (Кутия 4-5)</div>
+          <div class="value">${masterFacts}</div>
+        </div>
+        <div class="progress-card">
+          <div class="title">Точност</div>
+          <div class="value">${accuracy}%</div>
+        </div>
+        <div class="progress-card">
+          <div class="title">Средна трудност</div>
+          <div class="value">${avgDifficulty.toFixed(1)}</div>
+        </div>
+      `;
+    }
+    
+    // Изтегляне на данните като CSV
+    function exportToCSV() {
+      const facts = loadFacts();
+      
+      if (!facts || facts.length === 0) {
+        alert('Няма данни за изтегляне.');
+        return;
+      }
+      
+      // Създаване на заглавен ред с подобрени имена на колоните
+      let csvContent = 'Факт,Отговор,Кутия,Серия,Правилни,Грешни,Опити,Точност,Средно време,Трудност,Последна практика - дата,Последна практика - час,Следваща практика - дата,Следваща практика - час\n';
+      
+      // Добавяне на редове с данни
+      facts.forEach(fact => {
+        const accuracy = fact.attempts > 0 
+          ? Math.round((fact.correctCount / fact.attempts) * 100) 
+          : 0;
+        
+        // Форматиране на датите за CSV
+        const lastPracticedDate = new Date(fact.lastPracticed);
+        const nextPracticeDate = new Date(fact.nextPractice);
+        
+        // Форматиране на дата и час отделно
+        const formatDateCSV = (date) => {
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          return `${day}.${month}.${year}`;
+        };
+        
+        const formatTimeCSV = (date) => {
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          return `${hours}:${minutes}`;
+        };
+          
+        const row = [
+          `${fact.i}\u00d7${fact.j}`,
+          fact.i * fact.j,
+          fact.box,
+          fact.streak,
+          fact.correctCount,
+          fact.wrongCount,
+          fact.attempts,
+          `${accuracy}%`,
+          fact.avgTime.toFixed(1),
+          fact.difficultyRating.toFixed(1),
+          formatDateCSV(lastPracticedDate),
+          formatTimeCSV(lastPracticedDate),
+          formatDateCSV(nextPracticeDate),
+          formatTimeCSV(nextPracticeDate)
+        ];
+        
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Създаване на blob и изтегляне
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `multiplication-facts-${formatDateForFilename(new Date())}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Помощни функции за форматиране на дати
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = date - now;
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      
+      // Форматиране на датата
+      const options = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+      const formattedDate = date.toLocaleDateString('bg-BG', options);
+      
+      // Добавяне на описателен текст за относителното време
+      if (diffDays === 0) {
+        return `Днес, ${formattedDate}`;
+      } else if (diffDays === 1) {
+        return `Утре, ${formattedDate}`;
+      } else if (diffDays === -1) {
+        return `Вчера, ${formattedDate}`;
+      } else if (diffDays > 0) {
+        return `След ${diffDays} дни, ${formattedDate}`;
+      } else {
+        return `Преди ${Math.abs(diffDays)} дни, ${formattedDate}`;
+      }
+    }
+    
+    // Форматиране на дата в кратък формат
+    function formatDateShort(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      const isTomorrow = new Date(now.getTime() + 86400000).toDateString() === date.toDateString();
+      const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
+      
+      // Форматиране на част от датата
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const hour = date.getHours().toString().padStart(2, '0');
+      const minute = date.getMinutes().toString().padStart(2, '0');
+      
+      let timeString = `${hour}:${minute}`;
+      let formattedDateStr = `${day}.${month}`;
+      let wordString = '';
+      
+      if (isToday) {
+        wordString = 'Днес';
+      } else if (isTomorrow) {
+        wordString = 'Утре';
+      } else if (isYesterday) {
+        wordString = 'Вчера';
+      }
+      
+      return wordString ? `${wordString}` : `${formattedDateStr} ${timeString}`;
+    }
+    
+    function formatDateForFilename(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  </script>
+</body>
+</html>

@@ -2,3 +2,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* iPad-специфични стилове */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+  .app-wrapper {
+    height: 95vh !important; /* Фиксирана височина за iPad */
+    max-height: 95vh !important;
+    padding-bottom: 25px !important; /* Допълнителен padding отдолу за iPad */
+  }
+}

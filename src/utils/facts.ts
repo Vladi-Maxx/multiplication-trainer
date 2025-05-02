@@ -24,13 +24,13 @@ export function randomFact(prevFact?: { i: number, j: number }) {
       })
     : allFacts
 
+  // Всички факти, които са due са активни - премахната е проверката за box и streak
   const activeFacts = dueFacts.filter(fact => {
-    const rec = stats.find(r => r.i === fact.i && r.j === fact.j)
-    if (rec && rec.box >= 5 && rec.streak >= 3) {
-
-      return false
-    }
-    return true
+    const rec = stats.find(r => r.i === fact.i && r.j === fact.j);
+    
+    // Премахваме условието за box и streak
+    // Разчитаме само на nextPractice за определяне кога факт е готов за упражнение
+    return true;
   })
 
   // Филтрирай предишния факт, ако има повече от 1 възможен

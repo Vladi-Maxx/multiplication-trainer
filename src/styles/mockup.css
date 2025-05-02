@@ -10,6 +10,17 @@
   --error-red: #ef4444;
 }
 
+html, body {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  overscroll-behavior: none;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
   font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -17,22 +28,32 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 20px;
   box-sizing: border-box;
 }
 
 .app-wrapper {
-  background-color: rgba(214, 245, 227, 0.93); /* пастелно бледо зелено с лекa прозрачност */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  background-color: rgba(214, 245, 227, 0.93);
   /* Може да смениш на #d6f5e3 за плътно */
   backdrop-filter: blur(20px);
-  padding: 12px;
-  width: 100vw;
+  padding: 16px;
+  margin-bottom: 10px; /* Добавяме малко място отдолу */
   box-shadow: 0 4px 24px 0 rgba(60, 64, 67, 0.18), 0 1.5px 5px 0 rgba(60,64,67,0.12);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px; /* Малко намалена празнина между елементите */
   transition: box-shadow 0.2s cubic-bezier(.4,0,.2,1);
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 96%; /* Малко намалена височина, за да не се отрязва отдолу */
+  height: auto; /* Добавено за по-добро оразмеряване */
 }
 
 .app-wrapper:hover, .app-wrapper:focus-within {
