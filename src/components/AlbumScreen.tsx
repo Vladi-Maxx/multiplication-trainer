@@ -169,7 +169,7 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
             {allDragons.map((dragon, index) => (
               <div 
                 key={dragon.id} 
-                className={`group ${dragon.unlocked ? `dragon-float-${index % 3 === 0 ? 'slow' : index % 3 === 1 ? '' : 'fast'}` : ''}`}
+                className={`group ${dragon.unlocked ? (index % 3 === 0 ? 'dragon-float-slow' : index % 3 === 1 ? 'dragon-float' : 'dragon-float-fast') : ''}`}
                 style={{
                   animationDelay: `${index * 0.1}s`
                 }}
