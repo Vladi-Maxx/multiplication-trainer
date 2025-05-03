@@ -201,20 +201,7 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
                   </div>
                   
                   {/* Информация за дракона */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-indigo-900/60 to-transparent p-4 backdrop-blur-sm text-white">
-                    <h3 className="font-bold text-lg">{dragon.name}</h3>
-                    {dragon.unlocked ? (
-                      <div className="flex items-center mt-1">
-                        <div className="w-2 h-2 rounded-full bg-green-400 mr-2"></div>
-                        <p className="text-xs text-indigo-200">Отключен</p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center mt-1">
-                        <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
-                        <p className="text-xs text-indigo-200">Заключен</p>
-                      </div>
-                    )}
-                  </div>
+
                 </div>
               </div>
             ))}
