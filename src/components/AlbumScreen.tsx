@@ -137,19 +137,33 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
         {/* Магически ореол зад албума */}
         <div className="absolute -inset-10 bg-gradient-radial from-blue-500/30 via-purple-500/10 to-transparent blur-2xl z-0"></div>
 
-        {/* Заглавие и бутон Назад */}
-        <div className="bg-gradient-to-r from-indigo-800/80 to-purple-800/80 px-4 py-2 relative backdrop-blur z-10 min-h-[100px] flex items-center">
-          <img
-            src={titleImage}
-            alt="Магически дракони"
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[80%] max-h-[96px] w-auto h-auto object-contain drop-shadow-[0_2px_24px_rgba(255,140,0,0.7)] pointer-events-none select-none"
-            style={{zIndex: 1}}
-          />
+        {/* Заглавие и бутон за връщане */}
+        <div className="relative flex items-center justify-between p-4 bg-gradient-to-b from-indigo-900/80 to-transparent">
+          {/* Placeholder for alignment */}
+          <div className="w-32 h-32"></div> {/* Нов размер */}
+          
+          {/* Заглавна картинка - центрирана */}
+          <div className="flex-1 flex justify-center">
+            <img 
+              src={titleImage}
+              alt="Магически дракони"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[80%] max-h-[96px] w-auto h-auto object-contain drop-shadow-[0_2px_24px_rgba(255,140,0,0.7)] pointer-events-none select-none"
+              style={{zIndex: 1}}
+            />
+          </div>
+
+          {/* Бутон за връщане */}
           <button
             onClick={onBack}
-            className="aspect-square h-[72px] min-h-[48px] max-h-[96px] flex items-center justify-center rounded-full text-lg font-bold bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 border-2 border-white/40 shadow-2xl shadow-purple-700/60 hover:shadow-[0_0_32px_8px_rgba(255,140,0,0.7)] hover:scale-105 transition-all duration-200 ml-auto z-10 outline-none focus:ring-4 focus:ring-orange-300/50"
+            className="w-32 h-32 hover:opacity-90 transition-all duration-300 cursor-pointer flex items-center justify-center p-0 bg-transparent border-none group hover:scale-105" // Премахнат drop-shadow от бутона, добавен group за hover на img
+            style={{ justifySelf: 'flex-end' }}
+            aria-label="Назад към играта"
           >
-            Назад
+            <img 
+              src="/Pics/BackButon.png" 
+              alt="Назад"
+              className="w-full h-full object-contain drop-shadow-[0_1px_12px_rgba(255,140,0,0.5)] group-hover:drop-shadow-[0_2px_24px_rgba(255,140,0,0.7)] transition-all duration-300" // Добавен drop-shadow и group-hover ефект
+            />
           </button>
         </div>
 
