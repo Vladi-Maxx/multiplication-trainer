@@ -12,6 +12,8 @@ interface AlbumScreenProps {
 import dragonImg from '../../Pics/Dragon 1.png';
 const lockedDragonImg = '/Pics/Mystical Card with Glowing Runes.png';
 const titleImage = encodeURI('/Pics/ChatGPT Image May 2, 2025, 07_37_44 PM.png');
+import { FaArrowLeft } from 'react-icons/fa6'; // Промяна на импорта към fa6
+// Импорт на икона за стрелка
 
 const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
   // Състояние за всички дракони
@@ -22,6 +24,7 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   // Състояние за грешка при зареждане
   const [error, setError] = useState<string | null>(null);
+  const [selectedDragonUrl, setSelectedDragonUrl] = useState<string | null>(null);
   
   // Зареждаме всички дракони при монтиране на компонента
   useEffect(() => {
@@ -170,9 +173,17 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
             {allDragons.map((dragon, index) => (
               <div 
                 key={dragon.id} 
-                className={`group ${dragon.unlocked ? (index % 3 === 0 ? 'dragon-float-slow' : index % 3 === 1 ? 'dragon-float' : 'dragon-float-fast') : ''}`}
+                className={`group ${dragon.unlocked ? (index % 3 === 0 ? 'dragon-float-slow cursor-pointer' : index % 3 === 1 ? 'dragon-float cursor-pointer' : 'dragon-float-fast cursor-pointer') : ''}`}
                 style={{
                   animationDelay: `${index * 0.1}s`
+                }}
+                onClick={() => {
+                  if (dragon.unlocked) {
+                    const url = getDragonImageUrl(dragon);
+                    if (url) {
+                      setSelectedDragonUrl(url);
+                    }
+                  }
                 }}
               >
                 <div className={`
@@ -217,6 +228,29 @@ const AlbumScreen: React.FC<AlbumScreenProps> = ({ onBack }) => {
     
     {/* Видими големи звезди над цялото съдържание */}
     {generateVisibleStars()}
+    
+    {/* Модален прозорец за уголемена картинка */}
+    {selectedDragonUrl && (
+      <div 
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 cursor-pointer"
+        onClick={() => setSelectedDragonUrl(null)} // Затваряне при клик на фона
+      >
+        <img 
+          src={selectedDragonUrl}
+          alt="Уголемен дракон"
+          className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border-4 border-indigo-400/50 cursor-default"
+          onClick={(e) => e.stopPropagation()} // Предотвратява затваряне при клик на самата картинка
+        />
+        {/* Бутон за затваряне (стрелка назад) */}
+        <button 
+          onClick={() => setSelectedDragonUrl(null)}
+          className="absolute top-6 right-6 text-white text-3xl bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-10 cursor-pointer"
+          aria-label="Затвори уголемен изглед"
+        >
+          <FaArrowLeft />
+        </button>
+      </div>
+    )}
     </>
   );
 };
