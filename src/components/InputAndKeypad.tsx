@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import Keypad from './Keypad'
 
 interface Props {
-  onSubmit: (ok: boolean, duration: number, timedOut: boolean) => void
+  onSubmit: (userAnswer: string, ok: boolean, duration: number, timedOut: boolean) => void
   correctAnswer: number
   fact: { i: number, j: number }
 }
@@ -16,7 +16,7 @@ export default function InputAndKeypad({ onSubmit, correctAnswer, fact }: Props)
     startTimeRef.current = Date.now()
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      onSubmit(false, 30, true)
+      onSubmit('', false, 30, true)
       setAnswer('')
     }, 30000)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -26,7 +26,7 @@ export default function InputAndKeypad({ onSubmit, correctAnswer, fact }: Props)
     const duration = (Date.now() - startTimeRef.current) / 1000
     if (answer === '') return
     if (timerRef.current) clearTimeout(timerRef.current)
-    onSubmit(Number(answer) === correctAnswer, duration, false)
+    onSubmit(answer, Number(answer) === correctAnswer, duration, false)
     setAnswer('')
     startTimeRef.current = Date.now()
   }

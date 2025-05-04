@@ -12,6 +12,8 @@ import VictoryVideo from './components/VictoryVideo';
 import { initializeSession } from './services/supabase'
 // Импортираме функциите за работа с дракони
 import { getAllDragons, getLockedDragons, getUnlockedDragons, selectDragonForGame, unlockDragon, getDragonImageUrl } from './services/dragons'
+// Импортираме новия компонент
+import AnswerTransition from './components/AnswerTransition';
 
 const TARGET_SCORE = 300 // можеш да смениш по желание
 const POINT_CORRECT = 10
@@ -28,7 +30,7 @@ export default function App() {
   const [isFinished, setFinished] = useState(false)
   const [showVictoryVideo, setShowVictoryVideo] = useState(false)
   const [paused, setPaused] = useState(false)
-  const [lastCorrect, setLastCorrect] = useState(null)
+  const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [puzzleRevealedCount, setPuzzleRevealedCount] = useState(0);
   const progressRef = React.useRef<HTMLDivElement>(null);
   // Добавяме ново състояние за текущо избраното драконче
@@ -38,6 +40,10 @@ export default function App() {
   // URL към изображението на дракона
   const [dragonImageUrl, setDragonImageUrl] = useState<string>('');
   const [progressWidth, setProgressWidth] = React.useState(0);
+  // Състояния за контрол на анимацията при грешен отговор
+  const [showAnswerAnimation, setShowAnswerAnimation] = useState(false);
+  const [userWrongAnswer, setUserWrongAnswer] = useState<string | null>(null);
+
   React.useEffect(() => {
     if (progressRef.current) {
       setProgressWidth(progressRef.current.offsetWidth);
@@ -105,7 +111,25 @@ export default function App() {
     };
   }, [])
 
-  const handleSubmit = (ok, duration, timedOut) => {
+  // Функция, която се извиква след края на анимацията за грешен отговор
+  const handleWrongAnswerAnimationComplete = () => {
+    setShowAnswerAnimation(false); // Скриваме анимацията
+    setUserWrongAnswer(null); // Нулираме грешния отговор
+
+    // Изпълняваме логиката за грешен отговор СЛЕД анимацията
+    const newScore = score + POINT_WRONG;
+    setScore(newScore);
+    setPuzzleRevealedCount(prev => Math.max(prev - 1, 0)); // Скриваме 1 парченце
+
+    // Запазваме текущия факт като предишен, за да го изключим от следващото теглене
+    prevFactRef.current = fact;
+    // Избираме нов факт, различен от предишния
+    const newFact = randomFact(prevFactRef.current);
+    setFact(newFact);
+  };
+
+  const handleSubmit = (userAnswer: string, ok: boolean, duration: number, timedOut: boolean) => {
+    // console.log("handleSubmit called with:", { userAnswer, ok, duration, timedOut }); // Премахнат лог
     setLastCorrect(ok);
     if (timedOut) {
       setPaused(true);
@@ -134,11 +158,11 @@ export default function App() {
       responseTime: duration
     });
 
-    const newScore = score + (ok ? POINT_CORRECT : POINT_WRONG)
-
     if (ok) {
+      // console.log("Correct answer branch entered. Current fact:", fact); // Премахнат лог
+      const newScore = score + POINT_CORRECT;
       if (score < TARGET_SCORE && newScore >= TARGET_SCORE) {
-        // Играчът е достигнал целта точно сега
+        // console.log("Target score reached!"); // Премахнат лог
         setScore(newScore)
         setShowVictoryVideo(true)  // Първо показваме видеото за победа
         finishTraining();
@@ -158,21 +182,31 @@ export default function App() {
             });
         }
         
+        // Запазваме текущия факт като предишен
+        prevFactRef.current = fact;
+        // Избираме нов факт, различен от предишния
+        const newFact = randomFact(prevFactRef.current);
+        // console.log("Generating new fact:", newFact); // Премахнат лог
+        setFact(newFact);
+        
         return
       }
       // При правилен отговор разкриваме 2 парченца от пъзела (максимум 60)
       setPuzzleRevealedCount(prev => Math.min(prev + 2, 60));
-    } else {
-      // При грешен отговор скриваме 1 парченце от пъзела (минимум 0)
-      setPuzzleRevealedCount(prev => Math.max(prev - 1, 0));
-    }
+      setScore(newScore);
 
-    setScore(newScore)
-    // Запазваме текущия факт като предишен, за да го изключим от следващото теглене
-    prevFactRef.current = fact;
-    // Избираме нов факт, различен от предишния
-    const newFact = randomFact(prevFactRef.current);
-    setFact(newFact);
+      // Запазваме текущия факт като предишен
+      prevFactRef.current = fact;
+      // Избираме нов факт
+      const newFact = randomFact(prevFactRef.current);
+      // console.log("Generating new fact:", newFact); // Премахнат лог
+      setFact(newFact);
+    } else {
+      // Грешен отговор: Стартираме анимацията и запазваме грешния отговор
+      setUserWrongAnswer(userAnswer); // Запазваме въведения от потребителя отговор
+      setShowAnswerAnimation(true); // Показваме компонента за анимация
+      // Не правим нищо друго тук - логиката ще се изпълни в handleWrongAnswerAnimationComplete
+    }
   }
 
   const restart = async () => {
@@ -181,6 +215,8 @@ export default function App() {
     prevFactRef.current = null
     setPuzzleRevealedCount(0)
     setFinished(false)
+    setShowAnswerAnimation(false); // Скриваме анимацията при рестарт
+    setUserWrongAnswer(null); // Нулираме грешния отговор
     setScreen('home'); // При рестарт се връщаме на началния екран
     startTraining(); // При рестарт започни нова тренировка
     
@@ -207,6 +243,8 @@ export default function App() {
           setScore(0);
           setPuzzleRevealedCount(0);
           setLastCorrect(null);
+          setShowAnswerAnimation(false); // Уверяваме се, че анимацията е скрита в началото
+          setUserWrongAnswer(null);
           prevFactRef.current = null;
           setFact(randomFact());
           startTraining();
@@ -245,7 +283,7 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="text-2xl">Времето изтече!</div>
         <div className="flex gap-4">
-          <button onClick={() => { setPaused(false); setFact(randomFact(prevFactRef.current)); prevFactRef.current = fact; }} className="bg-blue-500 text-white px-4 py-2 rounded">
+          <button onClick={() => { setPaused(false); setShowAnswerAnimation(false); setUserWrongAnswer(null); setFact(randomFact(prevFactRef.current)); prevFactRef.current = fact; }} className="bg-blue-500 text-white px-4 py-2 rounded">
             Продължи
           </button>
           <button onClick={() => { setPaused(false); setFinished(true); finishTraining(); }} className="bg-red-500 text-white px-4 py-2 rounded">
@@ -301,7 +339,8 @@ export default function App() {
             transition: 'left 0.5s cubic-bezier(.4,0,.2,1)'
           }}
         >
-          {lastCorrect === null ? '' : lastCorrect ? '😜' : '😒'}
+          {/* Показваме емоджи само ако не се показва анимацията за грешен отговор */}
+          {!showAnswerAnimation && (lastCorrect === null ? '' : lastCorrect ? '😜' : '😒')}
         </span>
       </div>
 
@@ -317,13 +356,22 @@ export default function App() {
             dragonImageUrl={dragonImageUrl || '/Pics/Dragon 1.png'} 
           />
         </div>
-        {/* Централен панел - само задачата */}
-        <div className="flash-card-panel">
+        {/* Централен панел - задача и анимация */}
+        <div className="flash-card-panel flex flex-col items-center">
+          {/* Показваме задачата винаги */}
           <div className="problem" id="problem">
             {fact.i} × {fact.j}
           </div>
+          {/* Показваме анимацията за грешен отговор ПОД задачата */}
+          {showAnswerAnimation && userWrongAnswer !== null && (
+            <AnswerTransition
+              wrongAnswer={userWrongAnswer}
+              correctAnswer={fact.i * fact.j}
+              onComplete={handleWrongAnswerAnimationComplete}
+            />
+          )}
         </div>
-        {/* Десен панел - input и keypad */}
+        {/* Десен панел - input и keypad (вече винаги видим) */}
         <div className="right-panel flex flex-col items-center gap-4">
           <InputAndKeypad onSubmit={handleSubmit} correctAnswer={fact.i * fact.j} fact={fact} />
         </div>
