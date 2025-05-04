@@ -51,10 +51,10 @@ const AnswerTransition: React.FC<AnswerTransitionProps> = ({
 
         // Ако цифрата вече е вярна, прескачаме анимацията за нея
         if (startDigit === endDigit) {
-          await wait(100); // Кратка пауза за визуален ефект
+          // await wait(500); // Премахваме/намаляваме значително паузата
           newCompletedIndices.add(i);
-          setCompletedIndices(new Set(newCompletedIndices));
-          continue; // Преминаваме към следващата цифра
+          setCompletedIndices(new Set(newCompletedIndices)); // Оцветяваме я в зелено веднага
+          continue; // Преминаваме към следващата цифра без изчакване
         }
 
         // Изчисляваме броя стъпки напред и назад
@@ -109,7 +109,7 @@ const AnswerTransition: React.FC<AnswerTransitionProps> = ({
       {displayedDigits.map((digit, index) => (
         <span
           key={index}
-          className={`digit text-6xl font-bold mx-1 p-1 rounded transition-all duration-200 ease-in-out ${
+          className={`digit text-7xl font-bold mx-1 p-1 rounded transition-all duration-200 ease-in-out ${
             animatingIndex === index
               ? 'bg-yellow-300 scale-110' // Стил за анимираща се цифра
               : completedIndices.has(index)
